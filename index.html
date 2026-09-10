@@ -67,7 +67,7 @@
       <button class="btn-buy" onclick="selectTrack('figure8')">Select</button>
     </div>
     <div class="shop-item">
-      <span>3. Alpine Pass (Mountain Hairpins)</span>
+      <span>3. Alpine Pass (3D Elevation & Banked Hairpins)</span>
       <button class="btn-buy" onclick="selectTrack('alpine')">Select</button>
     </div>
   </div>
@@ -111,7 +111,7 @@
 
     // --- Scene Setup ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x111115, 0.003);
+    scene.fog = new THREE.FogExp2(0x050508, 0.002);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -137,20 +137,21 @@
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
 
-    const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+    const groundGeo = new THREE.PlaneGeometry(1200, 1200);
     const groundMat = new THREE.MeshStandardMaterial({ color: 0x111811, roughness: 0.9 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.5;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.4, metalness: 0.1 });
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.4, metalness: 0.1, side: THREE.DoubleSide });
 
     function buildOvalTrack() {
       const trackShape = new THREE.Shape();
-      trackShape.absarc(0, 0, 100, 0, Math.PI * 2, false);
+      trackShape.absarc(0, 0, 140, 0, Math.PI * 2, false);
       const holePath = new THREE.Path();
-      holePath.absarc(0, 0, 70, 0, Math.PI * 2, true);
+      holePath.absarc(0, 0, 100, 0, Math.PI * 2, true);
       trackShape.holes.push(holePath);
 
       const trackMesh = new THREE.Mesh(new THREE.ShapeGeometry(trackShape, 64), trackMat);
@@ -165,7 +166,7 @@
           new THREE.BoxGeometry(2, 2, 8),
           new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xee5253 : 0xffffff })
         );
-        barrier.position.set(Math.cos(angle) * 102, 1, Math.sin(angle) * 102);
+        barrier.position.set(Math.cos(angle) * 142, 1, Math.sin(angle) * 142);
         barrier.rotation.y = -angle;
         barrier.castShadow = true;
         trackGroup.add(barrier);
@@ -173,16 +174,14 @@
     }
 
     function buildFigure8Track() {
-      // Loop 1
       const shape1 = new THREE.Shape();
-      shape1.absarc(-60, 0, 65, 0, Math.PI * 2, false);
-      const hole1 = new THREE.Path(); hole1.absarc(-60, 0, 40, 0, Math.PI * 2, true);
+      shape1.absarc(-90, 0, 95, 0, Math.PI * 2, false);
+      const hole1 = new THREE.Path(); hole1.absarc(-90, 0, 60, 0, Math.PI * 2, true);
       shape1.holes.push(hole1);
 
-      // Loop 2
       const shape2 = new THREE.Shape();
-      shape2.absarc(60, 0, 65, 0, Math.PI * 2, false);
-      const hole2 = new THREE.Path(); hole2.absarc(60, 0, 40, 0, Math.PI * 2, true);
+      shape2.absarc(90, 0, 95, 0, Math.PI * 2, false);
+      const hole2 = new THREE.Path(); hole2.absarc(90, 0, 60, 0, Math.PI * 2, true);
       shape2.holes.push(hole2);
 
       const m1 = new THREE.Mesh(new THREE.ShapeGeometry(shape1, 64), trackMat);
@@ -194,16 +193,59 @@
     }
 
     function buildAlpineTrack() {
-      // Winding Snake Path Hairpins
-      const points = [];
-      for (let i = -150; i <= 150; i += 5) {
-        points.push(new THREE.Vector3(Math.sin(i * 0.05) * 50, 0.02, i));
+      const curvePoints = [];
+      const numPoints = 120;
+      
+      for (let i = 0; i <= numPoints; i++) {
+        const t = i / numPoints;
+        const angle = t * Math.PI * 6;
+        
+        const x = Math.sin(angle) * (180 + Math.sin(t * 10) * 90);
+        const z = Math.cos(angle) * (280 + Math.cos(t * 8) * 110);
+        const y = Math.sin(t * Math.PI * 4) * 35 + Math.cos(t * Math.PI * 2) * 15;
+        
+        curvePoints.push(new THREE.Vector3(x, y, z));
       }
-      const curve = new THREE.CatmullRomCurve3(points);
-      const trackGeo = new THREE.TubeGeometry(curve, 100, 18, 12, false);
-      const trackMesh = new THREE.Mesh(trackGeo, trackMat);
-      trackMesh.scale.set(1, 0.01, 1);
+
+      const curve = new THREE.CatmullRomCurve3(curvePoints, true);
+      
+      const trackWidth = 24;
+      const segments = 500;
+      const geometry = new THREE.BufferGeometry();
+      const positions = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const u = i / segments;
+        const point = curve.getPointAt(u);
+        const tangent = curve.getTangentAt(u);
+        
+        const up = new THREE.Vector3(0, 1, 0);
+        const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
+        
+        const bankAngle = Math.sin(u * Math.PI * 12) * 0.25; 
+        right.applyAxisAngle(tangent, bankAngle);
+
+        const leftEdge = point.clone().addScaledVector(right, -trackWidth / 2);
+        const rightEdge = point.clone().addScaledVector(right, trackWidth / 2);
+
+        positions.push(leftEdge.x, leftEdge.y, leftEdge.z);
+        positions.push(rightEdge.x, rightEdge.y, rightEdge.z);
+      }
+
+      const indices = [];
+      for (let i = 0; i < segments; i++) {
+        const base = i * 2;
+        indices.push(base, base + 1, base + 2);
+        indices.push(base + 1, base + 3, base + 2);
+      }
+
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+
+      const trackMesh = new THREE.Mesh(geometry, trackMat);
       trackMesh.receiveShadow = true;
+      trackMesh.castShadow = true;
       trackGroup.add(trackMesh);
     }
 
@@ -214,15 +256,15 @@
 
       if (type === 'oval') {
         buildOvalTrack();
-        carPos.set(85, 0, 0);
+        carPos.set(120, 0, 0);
         document.getElementById('track-hud').innerText = 'Track: Oval Speedway';
       } else if (type === 'figure8') {
         buildFigure8Track();
-        carPos.set(-60, 0, 50);
+        carPos.set(-90, 0, 75);
         document.getElementById('track-hud').innerText = 'Track: Figure-8 Circuit';
       } else if (type === 'alpine') {
         buildAlpineTrack();
-        carPos.set(0, 0, -140);
+        carPos.set(0, 15, -390);
         document.getElementById('track-hud').innerText = 'Track: Alpine Pass';
       }
 
@@ -239,9 +281,9 @@
     const snowPos = new Float32Array(snowCount * 3);
 
     for (let i = 0; i < snowCount * 3; i += 3) {
-      snowPos[i] = (Math.random() - 0.5) * 300;
+      snowPos[i] = (Math.random() - 0.5) * 400;
       snowPos[i + 1] = Math.random() * 100;
-      snowPos[i + 2] = (Math.random() - 0.5) * 300;
+      snowPos[i + 2] = (Math.random() - 0.5) * 400;
     }
     snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
     const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0 });
@@ -250,7 +292,7 @@
 
     // --- Vehicle ---
     const carGroup = new THREE.Group();
-    carGroup.position.set(85, 0, 0);
+    carGroup.position.set(120, 0, 0);
     scene.add(carGroup);
 
     const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0xd63031, metalness: 0.6, roughness: 0.2, clearcoat: 1.0 });
@@ -267,15 +309,15 @@
     carGroup.add(cabin);
 
     // Headlights
-    const headlightL = new THREE.SpotLight(0xfffaed, 0, 80, Math.PI / 6, 0.4);
+    const headlightL = new THREE.SpotLight(0xfffaed, 0, 100, Math.PI / 5, 0.3);
     headlightL.position.set(-0.7, 0.6, 2.1);
-    headlightL.target.position.set(-0.7, 0, 10);
+    headlightL.target.position.set(-0.7, 0, 15);
     carGroup.add(headlightL);
     carGroup.add(headlightL.target);
 
     const headlightR = headlightL.clone();
     headlightR.position.x = 0.7;
-    headlightR.target.position.set(0.7, 0, 10);
+    headlightR.target.position.set(0.7, 0, 15);
     carGroup.add(headlightR);
     carGroup.add(headlightR.target);
 
@@ -326,14 +368,14 @@
       wheels.push({ pivot: wheelPivot, mesh: wheelMesh, rim: rimMesh, isFront: pos.isFront });
     });
 
-    // Tire Smoke System
+    // Smoke System
     const smokeParticles = [];
     const smokeGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
     const smokeMat = new THREE.MeshBasicMaterial({ color: 0xeeeeee, transparent: true, opacity: 0.5 });
 
-    function createSmoke(x, z) {
+    function createSmoke(x, y, z) {
       const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
-      p.position.set(x + (Math.random() - 0.5) * 0.5, 0.2, z + (Math.random() - 0.5) * 0.5);
+      p.position.set(x + (Math.random() - 0.5) * 0.5, y + 0.2, z + (Math.random() - 0.5) * 0.5);
       scene.add(p);
       smokeParticles.push({ mesh: p, life: 1.0 });
     }
@@ -349,8 +391,8 @@
       if (e.code === 'Space') keys.handbrake = true;
       if (e.code === 'KeyH') {
         headlightsOn = !headlightsOn;
-        headlightL.intensity = headlightsOn ? 4 : 0;
-        headlightR.intensity = headlightsOn ? 4 : 0;
+        headlightL.intensity = headlightsOn ? 5 : 0;
+        headlightR.intensity = headlightsOn ? 5 : 0;
       }
       if (e.code === 'KeyC') toggleChristmasEvent();
       if (e.code === 'Escape') {
@@ -368,7 +410,7 @@
     });
 
     // --- Physics Variables ---
-    let carPos = new THREE.Vector3(85, 0, 0);
+    let carPos = new THREE.Vector3(120, 0, 0);
     let velocity = new THREE.Vector3(0, 0, 0);
     let carHeading = 0;
     let totalDriftScore = 0;
@@ -380,34 +422,42 @@
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
-      // 1. Day & Night Cycle
+      // 1. Day & Night Cycle Sync Fix
       dayNightTime += dt * 0.05;
       const sunY = Math.sin(dayNightTime) * 150;
       sunLight.position.set(100, sunY, Math.cos(dayNightTime) * 150);
 
-      if (sunY > 20) {
+      const timeHud = document.getElementById('time-hud');
+
+      if (sunY > 30) {
         scene.background = new THREE.Color(0x1a2a3a);
-        ambientLight.intensity = 0.5;
-        document.getElementById('time-hud').innerText = 'Time: Day';
-        document.getElementById('time-hud').style.color = '#f1c40f';
+        scene.fog.color.setHex(0x1a2a3a);
+        ambientLight.intensity = 0.6;
+        sunLight.intensity = 1.0;
+        timeHud.innerText = 'Time: Day';
+        timeHud.style.color = '#f1c40f';
       } else if (sunY > -10) {
         scene.background = new THREE.Color(0x3d1e28);
+        scene.fog.color.setHex(0x3d1e28);
         ambientLight.intensity = 0.3;
-        document.getElementById('time-hud').innerText = 'Time: Sunset';
-        document.getElementById('time-hud').style.color = '#e67e22';
+        sunLight.intensity = 0.4;
+        timeHud.innerText = 'Time: Sunset';
+        timeHud.style.color = '#e67e22';
       } else {
-        scene.background = new THREE.Color(0x050508);
-        ambientLight.intensity = 0.15;
-        document.getElementById('time-hud').innerText = 'Time: Night';
-        document.getElementById('time-hud').style.color = '#9b59b6';
+        scene.background = new THREE.Color(0x020205);
+        scene.fog.color.setHex(0x020205);
+        ambientLight.intensity = 0.05;
+        sunLight.intensity = 0.0;
+        timeHud.innerText = 'Time: Night';
+        timeHud.style.color = '#9b59b6';
       }
 
-      // 2. Taillight / Brake Lights
+      // 2. Taillights
       const isBraking = keys.backward;
       tailLightMatL.color.setHex(isBraking ? 0xff0000 : 0x660000);
       tailLightMatR.color.setHex(isBraking ? 0xff0000 : 0x660000);
 
-      // 3. Vector Physics & Steering
+      // 3. Physics & Steering
       const forwardDir = new THREE.Vector3(Math.sin(carHeading), 0, Math.cos(carHeading));
       const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
 
@@ -419,14 +469,14 @@
         carHeading += yawRate;
       }
 
-      // 4. Wheels Animation
+      // 4. Wheel Animations
       wheels.forEach(w => {
         if (w.isFront) w.pivot.rotation.y = turnInput * 0.4;
         w.mesh.rotation.x += currentSpeed * dt * 2.5;
         w.rim.rotation.x += currentSpeed * dt * 2.5;
       });
 
-      // 5. Engine & Friction
+      // 5. Friction & Acceleration
       if (keys.forward) velocity.addScaledVector(forwardDir, enginePower * dt);
       if (keys.backward) velocity.addScaledVector(forwardDir, -enginePower * 0.5 * dt);
 
@@ -443,13 +493,13 @@
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      // Body roll
+      // Body Roll
       carBody.rotation.z = velocity.dot(rightDir) * 0.02;
 
-      // 6. Smoke & Drift Points
+      // 6. Smoke & Drift
       const lateralSpeed = Math.abs(velocity.dot(rightDir));
       if (currentSpeed > 8 && lateralSpeed > 2.5) {
-        createSmoke(carPos.x - forwardDir.x * 1.5, carPos.z - forwardDir.z * 1.5);
+        createSmoke(carPos.x - forwardDir.x * 1.5, carPos.y, carPos.z - forwardDir.z * 1.5);
         
         const multiplier = isChristmas ? 2 : 1;
         const driftPoints = Math.floor(lateralSpeed * currentSpeed * 8 * dt * multiplier);
@@ -479,7 +529,7 @@
         snowParticles.geometry.attributes.position.needsUpdate = true;
       }
 
-      // Camera Tracking
+      // Camera Follow
       const cameraOffset = new THREE.Vector3(0, 5, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
       camera.position.lerp(carPos.clone().add(cameraOffset), 0.1);
       camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 3).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
