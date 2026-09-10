@@ -3,49 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Drift Game</title>
+  <title>3D Drift Simulator - Enhanced Edition</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #000;
-    }
-    #canvas-container {
-      width: 100vw;
-      height: 100vh;
-    }
-    #ui {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      color: #fff;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-      pointer-events: none;
-    }
-    .hud-title {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 5px;
-      letter-spacing: 1px;
-    }
-    .hud-stat {
-      font-size: 18px;
-      margin: 3px 0;
-    }
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
+    #canvas-container { width: 100vw; height: 100vh; }
+    #ui { position: absolute; top: 20px; left: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; }
+    .hud-title { font-size: 24px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px; color: #ff3366; }
+    .hud-stat { font-size: 16px; margin: 3px 0; }
+    
     #controls-hint {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      color: rgba(255,255,255,0.7);
-      font-size: 14px;
-      background: rgba(0,0,0,0.5);
-      padding: 10px 15px;
-      border-radius: 8px;
-      pointer-events: none;
+      position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.8);
+      font-size: 13px; background: rgba(0,0,0,0.6); padding: 10px 15px; border-radius: 8px; pointer-events: none;
     }
+
+    #garage-btn {
+      position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ff3366; color: #fff;
+      border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;
+    }
+
+    /* Garage Modal UI */
+    #garage-modal {
+      display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 400px; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8); border: 1px solid #333; z-index: 100;
+    }
+    .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 8px; }
+    .shop-item { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; }
+    .btn-buy { background: #00b894; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    .btn-buy:disabled { background: #555; cursor: not-allowed; }
+    .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 18px; cursor: pointer; }
   </style>
-  <!-- Three.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -56,126 +43,178 @@
     <div class="hud-title">DRIFT SIMULATOR</div>
     <div class="hud-stat" id="speedometer">Speed: 0 km/h</div>
     <div class="hud-stat" id="drift-score">Drift Points: 0</div>
+    <div class="hud-stat" id="credits-hud">Credits: $0</div>
+    <div class="hud-stat" id="event-hud" style="color: #00cec9;">Event: Normal Mode</div>
+  </div>
+
+  <button id="garage-btn" onclick="toggleGarage()">GARAGE & TUNING</button>
+
+  <div id="garage-modal">
+    <button class="close-btn" onclick="toggleGarage()">✕</button>
+    <div class="modal-title">Performance Tuning & Dealership</div>
+    
+    <div class="shop-item">
+      <span>Engine Upgrade (+Power)</span>
+      <button class="btn-buy" id="buy-engine" onclick="upgradeStat('engine')">Buy ($200)</button>
+    </div>
+    <div class="shop-item">
+      <span>Steering Angle (+Drift Angle)</span>
+      <button class="btn-buy" id="buy-steer" onclick="upgradeStat('steer')">Buy ($150)</button>
+    </div>
+    <div class="shop-item">
+      <span>Drift Tires (-Grip Slip)</span>
+      <button class="btn-buy" id="buy-tires" onclick="upgradeStat('tires')">Buy ($250)</button>
+    </div>
+    <hr style="border-color:#333;">
+    <div class="shop-item">
+      <span>Pro Drift Car (GT Spec)</span>
+      <button class="btn-buy" id="buy-car" onclick="buyCar()">Buy ($1000)</button>
+    </div>
   </div>
 
   <div id="controls-hint">
-    <b>Controls:</b> W/Up = Accelerate | S/Down = Reverse/Brake | A/D or Left/Right = Steer | Space = Handbrake (Drift)
+    <b>Controls:</b> W/Up = Gas | S/Down = Brake/Rev | A/D = Steer | Space = Handbrake<br>
+    <b>Toggles:</b> H = Headlights | C = Christmas Event | ESC = Garage
   </div>
 
   <script>
+    // --- Game Data & Tuning ---
+    let playerCredits = 0;
+    let enginePower = 22;
+    let maxSteerAngle = 0.65;
+    let tireDriftGrip = 0.78; // Lower = slides more
+    let ownedCarType = 'Standard';
+
     // --- Scene Setup ---
-    const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xd0e0f0, 0.005);
+    scene.fog = new THREE.FogExp2(0x111115, 0.003);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
-    container.appendChild(renderer.domElement);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- Lighting ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // --- Lights ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambientLight);
 
-    const sun = new THREE.DirectionalLight(0xfffaed, 1.2);
-    sun.position.set(100, 150, 50);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
-    sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 500;
-    const d = 100;
-    sun.shadow.camera.left = -d;
-    sun.shadow.camera.right = d;
-    sun.shadow.camera.top = d;
-    sun.shadow.camera.bottom = -d;
-    scene.add(sun);
+    const dirLight = new THREE.DirectionalLight(0xffd8a8, 0.8);
+    dirLight.position.set(100, 150, 50);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
 
-    // --- Environment / Ground ---
-    const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-    const groundMat = new THREE.MeshStandardMaterial({ 
-      color: 0x222225, 
-      roughness: 0.6, 
-      metalness: 0.2 
-    });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    // --- Oval Track Generation ---
+    const trackGroup = new THREE.Group();
+    scene.add(trackGroup);
 
-    // Grid markings on floor for visual speed reference
-    const grid = new THREE.GridHelper(1000, 100, 0x555555, 0x333333);
-    grid.position.y = 0.01;
-    scene.add(grid);
+    function createTrack() {
+      // Ground plane
+      const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x111811, roughness: 0.9 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
 
-    // Decorative Environment Pillars/Obstacles
-    const pillarGeo = new THREE.BoxGeometry(4, 12, 4);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5 });
-    for (let i = 0; i < 40; i++) {
-      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 30 + Math.random() * 150;
-      pillar.position.set(Math.cos(angle) * radius, 6, Math.sin(angle) * radius);
-      pillar.castShadow = true;
-      pillar.receiveShadow = true;
-      scene.add(pillar);
+      // Track Ring (Asphalt)
+      const trackShape = new THREE.Shape();
+      trackShape.absarc(0, 0, 100, 0, Math.PI * 2, false);
+      const holePath = new THREE.Path();
+      holePath.absarc(0, 0, 70, 0, Math.PI * 2, true);
+      trackShape.holes.push(holePath);
+
+      const trackGeo = new THREE.ShapeGeometry(trackShape, 64);
+      const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.4, metalness: 0.1 });
+      const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+      trackMesh.rotation.x = -Math.PI / 2;
+      trackMesh.position.y = 0.02;
+      trackMesh.receiveShadow = true;
+      trackGroup.add(trackMesh);
+
+      // Outer Barriers
+      for (let i = 0; i < 64; i++) {
+        const angle = (i / 64) * Math.PI * 2;
+        const x = Math.cos(angle) * 102;
+        const z = Math.sin(angle) * 102;
+        const barrier = new THREE.Mesh(
+          new THREE.BoxGeometry(2, 2, 8),
+          new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xee5253 : 0xffffff })
+        );
+        barrier.position.set(x, 1, z);
+        barrier.rotation.y = -angle;
+        barrier.castShadow = true;
+        trackGroup.add(barrier);
+      }
     }
+    createTrack();
 
-    // --- Car Construction ---
+    // --- Snowfall System (Christmas Event) ---
+    let isChristmas = false;
+    const snowParticleCount = 1200;
+    const snowGeo = new THREE.BufferGeometry();
+    const snowPositions = new Float32Array(snowParticleCount * 3);
+
+    for (let i = 0; i < snowParticleCount * 3; i += 3) {
+      snowPositions[i] = (Math.random() - 0.5) * 300;
+      snowPositions[i + 1] = Math.random() * 100;
+      snowPositions[i + 2] = (Math.random() - 0.5) * 300;
+    }
+    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+    const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0 });
+    const snowParticles = new THREE.Points(snowGeo, snowMat);
+    scene.add(snowParticles);
+
+    // --- Vehicle Assembly ---
     const carGroup = new THREE.Group();
+    carGroup.position.set(85, 0, 0);
     scene.add(carGroup);
 
-    // Car Body
-    const bodyGeo = new THREE.BoxGeometry(2, 0.8, 4.2);
-    const bodyMat = new THREE.MeshPhysicalMaterial({
-      color: 0xd63031,
-      metalness: 0.7,
-      roughness: 0.2,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.1
-    });
-    const carBody = new THREE.Mesh(bodyGeo, bodyMat);
-    carBody.position.y = 0.7;
+    // Car Body Mesh
+    const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0xd63031, metalness: 0.6, roughness: 0.2, clearcoat: 1.0 });
+    const carBody = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 4.2), bodyMat);
+    carBody.position.y = 0.6;
     carBody.castShadow = true;
     carGroup.add(carBody);
 
-    // Cabin / Glass
-    const cabinGeo = new THREE.BoxGeometry(1.6, 0.6, 2);
-    const cabinMat = new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.1, transmission: 0.6, transparent: true });
-    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-    cabin.position.set(0, 1.3, -0.2);
-    cabin.castShadow = true;
+    const cabin = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.55, 2),
+      new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.1, transmission: 0.7, transparent: true })
+    );
+    cabin.position.set(0, 1.15, -0.2);
     carGroup.add(cabin);
 
-    // Wheels
-    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 24);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-    const wheels = [];
-    const wheelPositions = [
-      { x: -1, y: 0.35, z: 1.3 },  // Front Left
-      { x: 1, y: 0.35, z: 1.3 },   // Front Right
-      { x: -1, y: 0.35, z: -1.3 }, // Rear Left
-      { x: 1, y: 0.35, z: -1.3 }   // Rear Right
-    ];
+    // Headlights
+    const headlightL = new THREE.SpotLight(0xfffaed, 0, 80, Math.PI / 6, 0.4);
+    headlightL.position.set(-0.7, 0.6, 2.1);
+    headlightL.target.position.set(-0.7, 0, 10);
+    carGroup.add(headlightL);
+    carGroup.add(headlightL.target);
 
-    wheelPositions.forEach((pos, idx) => {
-      const wheelPivot = new THREE.Group();
-      wheelPivot.position.set(pos.x, pos.y, pos.z);
-      
-      const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
-      wheelMesh.rotation.z = Math.PI / 2;
-      wheelMesh.castShadow = true;
-      
-      wheelPivot.add(wheelMesh);
-      carGroup.add(wheelPivot);
-      wheels.push({ pivot: wheelPivot, mesh: wheelMesh, isFront: idx < 2 });
-    });
+    const headlightR = headlightL.clone();
+    headlightR.position.x = 0.7;
+    headlightR.target.position.set(0.7, 0, 10);
+    carGroup.add(headlightR);
+    carGroup.add(headlightR.target);
 
-    // --- Controls & Input ---
+    let headlightsOn = false;
+
+    // Tire Smoke System
+    const smokeParticles = [];
+    const smokeGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.4 });
+
+    function createSmoke(x, z) {
+      const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
+      p.position.set(x, 0.2, z);
+      scene.add(p);
+      smokeParticles.push({ mesh: p, life: 1.0 });
+    }
+
+    // --- Controls & Inputs ---
     const keys = { forward: false, backward: false, left: false, right: false, handbrake: false };
 
     window.addEventListener('keydown', (e) => {
@@ -184,6 +223,13 @@
       if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = true;
       if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = true;
       if (e.code === 'Space') keys.handbrake = true;
+      if (e.code === 'KeyH') {
+        headlightsOn = !headlightsOn;
+        headlightL.intensity = headlightsOn ? 4 : 0;
+        headlightR.intensity = headlightsOn ? 4 : 0;
+      }
+      if (e.code === 'KeyC') toggleChristmasEvent();
+      if (e.code === 'Escape') toggleGarage();
     });
 
     window.addEventListener('keyup', (e) => {
@@ -194,17 +240,12 @@
       if (e.code === 'Space') keys.handbrake = false;
     });
 
-    // --- Physics Variables ---
-    let carPos = new THREE.Vector3(0, 0, 0);
-    let velocity = new THREE.Vector3(0, 0, 0);
-    let carHeading = 0; // Angle in radians
+    // --- Drift Physics Variables ---
+    let carPos = new THREE.Vector3(85, 0, 0);
+    let velocity = new THREE.Vector3();
+    let carHeading = 0;
     let steerAngle = 0;
     let totalDriftScore = 0;
-
-    const maxSteer = 0.5;
-    const accel = 18;
-    const maxSpeed = 35;
-    const friction = 0.98;
 
     // --- Main Game Loop ---
     const clock = new THREE.Clock();
@@ -213,79 +254,126 @@
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
-      // 1. Steering Logic
+      // 1. Steering & Counter-steering
       const targetSteer = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
-      steerAngle += (targetSteer * maxSteer - steerAngle) * 0.1;
+      steerAngle += (targetSteer * maxSteerAngle - steerAngle) * 0.12;
 
-      // Rotate Front Wheels visually
-      wheels.forEach(w => {
-        if (w.isFront) w.pivot.rotation.y = steerAngle;
-      });
-
-      // 2. Acceleration & Forward/Backward Force
-      const speed = velocity.length();
+      // 2. Propulsion
       const forwardDir = new THREE.Vector3(Math.sin(carHeading), 0, Math.cos(carHeading));
-      
-      if (keys.forward) {
-        velocity.addScaledVector(forwardDir, accel * dt);
-      }
-      if (keys.backward) {
-        velocity.addScaledVector(forwardDir, -accel * 0.5 * dt);
-      }
-
-      // Cap Speed
-      if (velocity.length() > maxSpeed) {
-        velocity.normalize().multiplyScalar(maxSpeed);
-      }
-
-      // 3. Drift Physics & Lateral Friction
       const rightDir = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardDir).normalize();
+
+      if (keys.forward) velocity.addScaledVector(forwardDir, enginePower * dt);
+      if (keys.backward) velocity.addScaledVector(forwardDir, -enginePower * 0.4 * dt);
+
+      // 3. Drift Friction Physics (De-couple forward vs lateral speeds)
       const forwardVelocity = forwardDir.clone().multiplyScalar(velocity.dot(forwardDir));
       const lateralVelocity = rightDir.clone().multiplyScalar(velocity.dot(rightDir));
 
-      // Drift factor reduces lateral grip when handbrake is held or turning hard at speed
-      let grip = keys.handbrake ? 0.82 : 0.94;
-      
-      // Update Velocity with separated forward and reduced lateral components
-      velocity = forwardVelocity.add(lateralVelocity.multiplyScalar(grip));
-      velocity.multiplyScalar(friction); // Environmental Drag
+      // Active Grip reduction during handbrake / fast turns
+      let activeGrip = keys.handbrake ? 0.65 : tireDriftGrip;
+      velocity = forwardVelocity.add(lateralVelocity.multiplyScalar(activeGrip));
+      velocity.multiplyScalar(0.985); // Drag
 
-      // 4. Vehicle Heading Rotation
+      const speed = velocity.length();
+
+      // 4. Car Rotation & Body Roll Simulation
       if (speed > 0.5) {
-        const directionMultiplier = velocity.dot(forwardDir) >= 0 ? 1 : -1;
-        carHeading += steerAngle * (speed / maxSpeed) * 1.8 * directionMultiplier * dt;
+        const dirMultiplier = velocity.dot(forwardDir) >= 0 ? 1 : -1;
+        carHeading += steerAngle * (speed / 30) * 1.6 * dirMultiplier * dt;
       }
 
-      // Update Car Position & Rotation
       carPos.addScaledVector(velocity, dt);
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      // Animate Wheels Turning
-      const wheelRotationSpeed = velocity.dot(forwardDir) * dt * 3;
-      wheels.forEach(w => w.mesh.rotation.x += wheelRotationSpeed);
+      // Body roll angle visual tilt when drifting sideways
+      const sideSlipSpeed = velocity.dot(rightDir);
+      carBody.rotation.z = -sideSlipSpeed * 0.03;
 
-      // 5. Drift Scoring Logic
-      const driftAngle = Math.abs(velocity.clone().normalize().dot(rightDir));
-      if (speed > 8 && driftAngle > 0.3) {
-        const points = Math.floor(speed * driftAngle * 10 * dt);
-        totalDriftScore += points;
+      // 5. Tire Smoke & Drift Scoring
+      const slideFactor = Math.abs(sideSlipSpeed);
+      if (speed > 6 && slideFactor > 2.0) {
+        // Generate Smoke
+        createSmoke(carPos.x - forwardDir.x * 1.5, carPos.z - forwardDir.z * 1.5);
+        
+        // Accumulate drift points
+        const multiplier = isChristmas ? 2 : 1;
+        const pts = Math.floor(slideFactor * speed * 5 * dt * multiplier);
+        totalDriftScore += pts;
+        playerCredits += Math.floor(pts * 0.05);
       }
 
-      // 6. Camera Follow System
-      const cameraOffset = new THREE.Vector3(0, 5, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
-      const targetCameraPos = carPos.clone().add(cameraOffset);
-      camera.position.lerp(targetCameraPos, 0.1);
-      camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 2).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
+      // 6. Update Smoke Particles
+      for (let i = smokeParticles.length - 1; i >= 0; i--) {
+        const p = smokeParticles[i];
+        p.life -= dt * 1.5;
+        p.mesh.scale.addScalar(dt * 1.2);
+        p.mesh.material.opacity = p.life * 0.4;
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          smokeParticles.splice(i, 1);
+        }
+      }
 
-      // 7. Update UI HUD
+      // 7. Update Snow Particles (Christmas Event)
+      if (isChristmas) {
+        const pos = snowParticles.geometry.attributes.position.array;
+        for (let i = 1; i < snowParticleCount * 3; i += 3) {
+          pos[i] -= dt * 15;
+          if (pos[i] < 0) pos[i] = 80;
+        }
+        snowParticles.geometry.attributes.position.needsUpdate = true;
+      }
+
+      // 8. Dynamic Camera Tracking
+      const cameraOffset = new THREE.Vector3(0, 5, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
+      camera.position.lerp(carPos.clone().add(cameraOffset), 0.1);
+      camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 3).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
+
+      // 9. HUD Updates
       document.getElementById('speedometer').innerText = `Speed: ${Math.round(speed * 3.6)} km/h`;
       document.getElementById('drift-score').innerText = `Drift Points: ${Math.floor(totalDriftScore)}`;
+      document.getElementById('credits-hud').innerText = `Credits: $${playerCredits}`;
 
       renderer.render(scene, camera);
     }
 
-    // --- Window Resize Handling ---
+    // --- UI & Event Functions ---
+    function toggleGarage() {
+      const m = document.getElementById('garage-modal');
+      m.style.display = m.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function upgradeStat(type) {
+      if (type === 'engine' && playerCredits >= 200) {
+        playerCredits -= 200; enginePower += 5;
+      } else if (type === 'steer' && playerCredits >= 150) {
+        playerCredits -= 150; maxSteerAngle += 0.1;
+      } else if (type === 'tires' && playerCredits >= 250) {
+        playerCredits -= 250; tireDriftGrip -= 0.08;
+      }
+    }
+
+    function buyCar() {
+      if (playerCredits >= 1000 && ownedCarType === 'Standard') {
+        playerCredits -= 1000;
+        ownedCarType = 'Pro GT';
+        bodyMat.color.setHex(0x00cec9);
+        enginePower = 34;
+        maxSteerAngle = 0.85;
+        tireDriftGrip = 0.55;
+        document.getElementById('buy-car').innerText = 'Owned';
+        document.getElementById('buy-car').disabled = true;
+      }
+    }
+
+    function toggleChristmasEvent() {
+      isChristmas = !isChristmas;
+      snowMat.opacity = isChristmas ? 0.8 : 0;
+      document.getElementById('event-hud').innerText = isChristmas ? 'Event: Christmas Mode (2x Points!)' : 'Event: Normal Mode';
+      document.getElementById('event-hud').style.color = isChristmas ? '#ff7675' : '#00cec9';
+    }
+
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
