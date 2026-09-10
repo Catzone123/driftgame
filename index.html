@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Drift Simulator - Enhanced Edition</title>
+  <title>3D Drift Simulator - Realistic Drift Physics</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
     #canvas-container { width: 100vw; height: 100vh; }
@@ -21,7 +21,6 @@
       border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;
     }
 
-    /* Garage Modal UI */
     #garage-modal {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: 400px; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px;
@@ -62,7 +61,7 @@
       <button class="btn-buy" id="buy-steer" onclick="upgradeStat('steer')">Buy ($150)</button>
     </div>
     <div class="shop-item">
-      <span>Drift Tires (-Grip Slip)</span>
+      <span>Slick Tires (Extreme Drift)</span>
       <button class="btn-buy" id="buy-tires" onclick="upgradeStat('tires')">Buy ($250)</button>
     </div>
     <hr style="border-color:#333;">
@@ -73,16 +72,16 @@
   </div>
 
   <div id="controls-hint">
-    <b>Controls:</b> W/Up = Gas | S/Down = Brake/Rev | A/D = Steer | Space = Handbrake<br>
+    <b>Controls:</b> W/Up = Gas | S/Down = Brake/Rev | A/D = Steer | Space = Handbrake (Drift)<br>
     <b>Toggles:</b> H = Headlights | C = Christmas Event | ESC = Garage
   </div>
 
   <script>
-    // --- Game Data & Tuning ---
+    // --- Stats & Upgrades ---
     let playerCredits = 0;
-    let enginePower = 22;
-    let maxSteerAngle = 0.65;
-    let tireDriftGrip = 0.78; // Lower = slides more
+    let enginePower = 35;
+    let steeringSensitivity = 2.8;
+    let tireGrip = 0.88; // Lower = higher slide momentum
     let ownedCarType = 'Standard';
 
     // --- Scene Setup ---
@@ -107,12 +106,11 @@
     dirLight.shadow.mapSize.height = 2048;
     scene.add(dirLight);
 
-    // --- Oval Track Generation ---
+    // --- Track ---
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
 
     function createTrack() {
-      // Ground plane
       const groundGeo = new THREE.PlaneGeometry(1000, 1000);
       const groundMat = new THREE.MeshStandardMaterial({ color: 0x111811, roughness: 0.9 });
       const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -120,7 +118,6 @@
       ground.receiveShadow = true;
       scene.add(ground);
 
-      // Track Ring (Asphalt)
       const trackShape = new THREE.Shape();
       trackShape.absarc(0, 0, 100, 0, Math.PI * 2, false);
       const holePath = new THREE.Path();
@@ -135,7 +132,6 @@
       trackMesh.receiveShadow = true;
       trackGroup.add(trackMesh);
 
-      // Outer Barriers
       for (let i = 0; i < 64; i++) {
         const angle = (i / 64) * Math.PI * 2;
         const x = Math.cos(angle) * 102;
@@ -152,28 +148,27 @@
     }
     createTrack();
 
-    // --- Snowfall System (Christmas Event) ---
+    // --- Christmas Event Snow ---
     let isChristmas = false;
-    const snowParticleCount = 1200;
+    const snowCount = 1200;
     const snowGeo = new THREE.BufferGeometry();
-    const snowPositions = new Float32Array(snowParticleCount * 3);
+    const snowPos = new Float32Array(snowCount * 3);
 
-    for (let i = 0; i < snowParticleCount * 3; i += 3) {
-      snowPositions[i] = (Math.random() - 0.5) * 300;
-      snowPositions[i + 1] = Math.random() * 100;
-      snowPositions[i + 2] = (Math.random() - 0.5) * 300;
+    for (let i = 0; i < snowCount * 3; i += 3) {
+      snowPos[i] = (Math.random() - 0.5) * 300;
+      snowPos[i + 1] = Math.random() * 100;
+      snowPos[i + 2] = (Math.random() - 0.5) * 300;
     }
-    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
     const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0 });
     const snowParticles = new THREE.Points(snowGeo, snowMat);
     scene.add(snowParticles);
 
-    // --- Vehicle Assembly ---
+    // --- Vehicle ---
     const carGroup = new THREE.Group();
     carGroup.position.set(85, 0, 0);
     scene.add(carGroup);
 
-    // Car Body Mesh
     const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0xd63031, metalness: 0.6, roughness: 0.2, clearcoat: 1.0 });
     const carBody = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 4.2), bodyMat);
     carBody.position.y = 0.6;
@@ -204,17 +199,17 @@
 
     // Tire Smoke System
     const smokeParticles = [];
-    const smokeGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.4 });
+    const smokeGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xeeeeee, transparent: true, opacity: 0.5 });
 
     function createSmoke(x, z) {
       const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
-      p.position.set(x, 0.2, z);
+      p.position.set(x + (Math.random() - 0.5) * 0.5, 0.2, z + (Math.random() - 0.5) * 0.5);
       scene.add(p);
       smokeParticles.push({ mesh: p, life: 1.0 });
     }
 
-    // --- Controls & Inputs ---
+    // --- Inputs ---
     const keys = { forward: false, backward: false, left: false, right: false, handbrake: false };
 
     window.addEventListener('keydown', (e) => {
@@ -240,105 +235,112 @@
       if (e.code === 'Space') keys.handbrake = false;
     });
 
-    // --- Drift Physics Variables ---
+    // --- Vector Physics Variables ---
     let carPos = new THREE.Vector3(85, 0, 0);
-    let velocity = new THREE.Vector3();
-    let carHeading = 0;
-    let steerAngle = 0;
+    let velocity = new THREE.Vector3(0, 0, 0); // World momentum vector
+    let carHeading = 0; // Body rotation angle
     let totalDriftScore = 0;
 
-    // --- Main Game Loop ---
+    // --- Loop ---
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
-      // 1. Steering & Counter-steering
-      const targetSteer = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
-      steerAngle += (targetSteer * maxSteerAngle - steerAngle) * 0.12;
-
-      // 2. Propulsion
+      // Forward & Right vectors relative to car orientation
       const forwardDir = new THREE.Vector3(Math.sin(carHeading), 0, Math.cos(carHeading));
-      const rightDir = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardDir).normalize();
+      const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
 
-      if (keys.forward) velocity.addScaledVector(forwardDir, enginePower * dt);
-      if (keys.backward) velocity.addScaledVector(forwardDir, -enginePower * 0.4 * dt);
+      // 1. Steering & Body Yaw Rotation
+      const turnInput = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
+      const currentSpeed = velocity.length();
 
-      // 3. Drift Friction Physics (De-couple forward vs lateral speeds)
+      if (currentSpeed > 1.0) {
+        // High-speed yaw rotation (counter-steering mechanics)
+        const yawRate = turnInput * steeringSensitivity * dt * (keys.handbrake ? 1.5 : 1.0);
+        carHeading += yawRate;
+      }
+
+      // 2. Engine Thrust Acceleration
+      if (keys.forward) {
+        velocity.addScaledVector(forwardDir, enginePower * dt);
+      }
+      if (keys.backward) {
+        velocity.addScaledVector(forwardDir, -enginePower * 0.5 * dt);
+      }
+
+      // 3. De-coupled Tire Physics (Friction Separation)
+      // Break momentum into forward velocity vs sideways slide velocity
       const forwardVelocity = forwardDir.clone().multiplyScalar(velocity.dot(forwardDir));
       const lateralVelocity = rightDir.clone().multiplyScalar(velocity.dot(rightDir));
 
-      // Active Grip reduction during handbrake / fast turns
-      let activeGrip = keys.handbrake ? 0.65 : tireDriftGrip;
-      velocity = forwardVelocity.add(lateralVelocity.multiplyScalar(activeGrip));
-      velocity.multiplyScalar(0.985); // Drag
+      // Lateral grip drops significantly when holding handbrake or sliding fast
+      let currentGrip = keys.handbrake ? 0.25 : tireGrip;
+      if (isChristmas) currentGrip *= 0.7; // Snow track reduces grip
 
-      const speed = velocity.length();
+      // Recombine momentum vector with reduced lateral friction (creates true drift slide)
+      velocity = forwardVelocity.add(lateralVelocity.multiplyScalar(currentGrip));
+      velocity.multiplyScalar(0.985); // Air resistance / Drag
 
-      // 4. Car Rotation & Body Roll Simulation
-      if (speed > 0.5) {
-        const dirMultiplier = velocity.dot(forwardDir) >= 0 ? 1 : -1;
-        carHeading += steerAngle * (speed / 30) * 1.6 * dirMultiplier * dt;
-      }
-
+      // Move car by world velocity vector
       carPos.addScaledVector(velocity, dt);
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      // Body roll angle visual tilt when drifting sideways
-      const sideSlipSpeed = velocity.dot(rightDir);
-      carBody.rotation.z = -sideSlipSpeed * 0.03;
+      // 4. Calculate Slip Angle & Sideways Slide Intensity
+      const lateralSpeed = Math.abs(velocity.dot(rightDir));
+      const isDrifting = currentSpeed > 8 && lateralSpeed > 2.5;
+
+      // Body roll tilt visual effect
+      carBody.rotation.z = velocity.dot(rightDir) * 0.02;
 
       // 5. Tire Smoke & Drift Scoring
-      const slideFactor = Math.abs(sideSlipSpeed);
-      if (speed > 6 && slideFactor > 2.0) {
-        // Generate Smoke
+      if (isDrifting) {
         createSmoke(carPos.x - forwardDir.x * 1.5, carPos.z - forwardDir.z * 1.5);
         
-        // Accumulate drift points
         const multiplier = isChristmas ? 2 : 1;
-        const pts = Math.floor(slideFactor * speed * 5 * dt * multiplier);
-        totalDriftScore += pts;
-        playerCredits += Math.floor(pts * 0.05);
+        const driftPoints = Math.floor(lateralSpeed * currentSpeed * 8 * dt * multiplier);
+        totalDriftScore += driftPoints;
+        playerCredits += Math.floor(driftPoints * 0.05);
       }
 
-      // 6. Update Smoke Particles
+      // Update Smoke Particles
       for (let i = smokeParticles.length - 1; i >= 0; i--) {
         const p = smokeParticles[i];
         p.life -= dt * 1.5;
-        p.mesh.scale.addScalar(dt * 1.2);
-        p.mesh.material.opacity = p.life * 0.4;
+        p.mesh.scale.addScalar(dt * 1.5);
+        p.mesh.material.opacity = p.life * 0.5;
         if (p.life <= 0) {
           scene.remove(p.mesh);
           smokeParticles.splice(i, 1);
         }
       }
 
-      // 7. Update Snow Particles (Christmas Event)
+      // Update Snow
       if (isChristmas) {
         const pos = snowParticles.geometry.attributes.position.array;
-        for (let i = 1; i < snowParticleCount * 3; i += 3) {
-          pos[i] -= dt * 15;
+        for (let i = 1; i < snowCount * 3; i += 3) {
+          pos[i] -= dt * 20;
           if (pos[i] < 0) pos[i] = 80;
         }
         snowParticles.geometry.attributes.position.needsUpdate = true;
       }
 
-      // 8. Dynamic Camera Tracking
+      // Camera Follow
       const cameraOffset = new THREE.Vector3(0, 5, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
       camera.position.lerp(carPos.clone().add(cameraOffset), 0.1);
       camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 3).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
 
-      // 9. HUD Updates
-      document.getElementById('speedometer').innerText = `Speed: ${Math.round(speed * 3.6)} km/h`;
+      // HUD Updates
+      document.getElementById('speedometer').innerText = `Speed: ${Math.round(currentSpeed * 3.6)} km/h`;
       document.getElementById('drift-score').innerText = `Drift Points: ${Math.floor(totalDriftScore)}`;
       document.getElementById('credits-hud').innerText = `Credits: $${playerCredits}`;
 
       renderer.render(scene, camera);
     }
 
-    // --- UI & Event Functions ---
+    // --- UI Controls ---
     function toggleGarage() {
       const m = document.getElementById('garage-modal');
       m.style.display = m.style.display === 'block' ? 'none' : 'block';
@@ -346,11 +348,11 @@
 
     function upgradeStat(type) {
       if (type === 'engine' && playerCredits >= 200) {
-        playerCredits -= 200; enginePower += 5;
+        playerCredits -= 200; enginePower += 10;
       } else if (type === 'steer' && playerCredits >= 150) {
-        playerCredits -= 150; maxSteerAngle += 0.1;
+        playerCredits -= 150; steeringSensitivity += 0.8;
       } else if (type === 'tires' && playerCredits >= 250) {
-        playerCredits -= 250; tireDriftGrip -= 0.08;
+        playerCredits -= 250; tireGrip -= 0.15;
       }
     }
 
@@ -359,9 +361,9 @@
         playerCredits -= 1000;
         ownedCarType = 'Pro GT';
         bodyMat.color.setHex(0x00cec9);
-        enginePower = 34;
-        maxSteerAngle = 0.85;
-        tireDriftGrip = 0.55;
+        enginePower = 60;
+        steeringSensitivity = 4.5;
+        tireGrip = 0.50;
         document.getElementById('buy-car').innerText = 'Owned';
         document.getElementById('buy-car').disabled = true;
       }
