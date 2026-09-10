@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Drift Simulator - Realistic Drift Physics</title>
+  <title>3D Drift Simulator - Multi-Track Edition</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
     #canvas-container { width: 100vw; height: 100vh; }
@@ -16,19 +16,22 @@
       font-size: 13px; background: rgba(0,0,0,0.6); padding: 10px 15px; border-radius: 8px; pointer-events: none;
     }
 
-    #garage-btn {
-      position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ff3366; color: #fff;
+    .top-btn {
+      position: absolute; top: 20px; padding: 10px 18px; color: #fff;
       border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;
     }
+    #garage-btn { right: 20px; background: #ff3366; }
+    #track-btn { right: 180px; background: #0984e3; }
 
-    #garage-modal {
+    /* Modal Overlay Styling */
+    .modal {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 400px; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px;
+      width: 420px; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px;
       box-shadow: 0 0 20px rgba(0,0,0,0.8); border: 1px solid #333; z-index: 100;
     }
     .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 8px; }
     .shop-item { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; }
-    .btn-buy { background: #00b894; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    .btn-buy { background: #00b894; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     .btn-buy:disabled { background: #555; cursor: not-allowed; }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 18px; cursor: pointer; }
   </style>
@@ -43,13 +46,35 @@
     <div class="hud-stat" id="speedometer">Speed: 0 km/h</div>
     <div class="hud-stat" id="drift-score">Drift Points: 0</div>
     <div class="hud-stat" id="credits-hud">Credits: $0</div>
+    <div class="hud-stat" id="track-hud" style="color: #74b9ff;">Track: Oval Speedway</div>
+    <div class="hud-stat" id="time-hud" style="color: #f1c40f;">Time: Day</div>
     <div class="hud-stat" id="event-hud" style="color: #00cec9;">Event: Normal Mode</div>
   </div>
 
-  <button id="garage-btn" onclick="toggleGarage()">GARAGE & TUNING</button>
+  <button class="top-btn" id="track-btn" onclick="toggleModal('track-modal')">SELECT TRACK</button>
+  <button class="top-btn" id="garage-btn" onclick="toggleModal('garage-modal')">GARAGE & TUNING</button>
 
-  <div id="garage-modal">
-    <button class="close-btn" onclick="toggleGarage()">✕</button>
+  <!-- Track Selection Modal -->
+  <div class="modal" id="track-modal">
+    <button class="close-btn" onclick="toggleModal('track-modal')">✕</button>
+    <div class="modal-title">Select Drift Track</div>
+    <div class="shop-item">
+      <span>1. Oval Speedway (Beginner)</span>
+      <button class="btn-buy" onclick="selectTrack('oval')">Select</button>
+    </div>
+    <div class="shop-item">
+      <span>2. Figure-8 Circuit (Technical)</span>
+      <button class="btn-buy" onclick="selectTrack('figure8')">Select</button>
+    </div>
+    <div class="shop-item">
+      <span>3. Alpine Pass (Mountain Hairpins)</span>
+      <button class="btn-buy" onclick="selectTrack('alpine')">Select</button>
+    </div>
+  </div>
+
+  <!-- Garage Modal -->
+  <div class="modal" id="garage-modal">
+    <button class="close-btn" onclick="toggleModal('garage-modal')">✕</button>
     <div class="modal-title">Performance Tuning & Dealership</div>
     
     <div class="shop-item">
@@ -72,8 +97,8 @@
   </div>
 
   <div id="controls-hint">
-    <b>Controls:</b> W/Up = Gas | S/Down = Brake/Rev | A/D = Steer | Space = Handbrake (Drift)<br>
-    <b>Toggles:</b> H = Headlights | C = Christmas Event | ESC = Garage
+    <b>Controls:</b> W/Up = Gas | S/Down = Brake/Taillights | A/D = Steer | Space = Handbrake (Drift)<br>
+    <b>Toggles:</b> H = Headlights | C = Christmas Event | ESC = Close Menus
   </div>
 
   <script>
@@ -81,7 +106,7 @@
     let playerCredits = 0;
     let enginePower = 35;
     let steeringSensitivity = 2.8;
-    let tireGrip = 0.88; // Lower = higher slide momentum
+    let tireGrip = 0.88;
     let ownedCarType = 'Standard';
 
     // --- Scene Setup ---
@@ -95,38 +120,40 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- Lights ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    // --- Lighting Setup ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffd8a8, 0.8);
-    dirLight.position.set(100, 150, 50);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    scene.add(dirLight);
+    const sunLight = new THREE.DirectionalLight(0xffd8a8, 1.0);
+    sunLight.position.set(100, 150, 50);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    scene.add(sunLight);
 
-    // --- Track ---
+    let dayNightTime = 0;
+
+    // --- Ground & Track Management ---
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
 
-    function createTrack() {
-      const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-      const groundMat = new THREE.MeshStandardMaterial({ color: 0x111811, roughness: 0.9 });
-      const ground = new THREE.Mesh(groundGeo, groundMat);
-      ground.rotation.x = -Math.PI / 2;
-      ground.receiveShadow = true;
-      scene.add(ground);
+    const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x111811, roughness: 0.9 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.4, metalness: 0.1 });
+
+    function buildOvalTrack() {
       const trackShape = new THREE.Shape();
       trackShape.absarc(0, 0, 100, 0, Math.PI * 2, false);
       const holePath = new THREE.Path();
       holePath.absarc(0, 0, 70, 0, Math.PI * 2, true);
       trackShape.holes.push(holePath);
 
-      const trackGeo = new THREE.ShapeGeometry(trackShape, 64);
-      const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.4, metalness: 0.1 });
-      const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+      const trackMesh = new THREE.Mesh(new THREE.ShapeGeometry(trackShape, 64), trackMat);
       trackMesh.rotation.x = -Math.PI / 2;
       trackMesh.position.y = 0.02;
       trackMesh.receiveShadow = true;
@@ -134,21 +161,78 @@
 
       for (let i = 0; i < 64; i++) {
         const angle = (i / 64) * Math.PI * 2;
-        const x = Math.cos(angle) * 102;
-        const z = Math.sin(angle) * 102;
         const barrier = new THREE.Mesh(
           new THREE.BoxGeometry(2, 2, 8),
           new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xee5253 : 0xffffff })
         );
-        barrier.position.set(x, 1, z);
+        barrier.position.set(Math.cos(angle) * 102, 1, Math.sin(angle) * 102);
         barrier.rotation.y = -angle;
         barrier.castShadow = true;
         trackGroup.add(barrier);
       }
     }
-    createTrack();
 
-    // --- Christmas Event Snow ---
+    function buildFigure8Track() {
+      // Loop 1
+      const shape1 = new THREE.Shape();
+      shape1.absarc(-60, 0, 65, 0, Math.PI * 2, false);
+      const hole1 = new THREE.Path(); hole1.absarc(-60, 0, 40, 0, Math.PI * 2, true);
+      shape1.holes.push(hole1);
+
+      // Loop 2
+      const shape2 = new THREE.Shape();
+      shape2.absarc(60, 0, 65, 0, Math.PI * 2, false);
+      const hole2 = new THREE.Path(); hole2.absarc(60, 0, 40, 0, Math.PI * 2, true);
+      shape2.holes.push(hole2);
+
+      const m1 = new THREE.Mesh(new THREE.ShapeGeometry(shape1, 64), trackMat);
+      const m2 = new THREE.Mesh(new THREE.ShapeGeometry(shape2, 64), trackMat);
+      m1.rotation.x = -Math.PI / 2; m1.position.y = 0.02; m1.receiveShadow = true;
+      m2.rotation.x = -Math.PI / 2; m2.position.y = 0.02; m2.receiveShadow = true;
+      trackGroup.add(m1);
+      trackGroup.add(m2);
+    }
+
+    function buildAlpineTrack() {
+      // Winding Snake Path Hairpins
+      const points = [];
+      for (let i = -150; i <= 150; i += 5) {
+        points.push(new THREE.Vector3(Math.sin(i * 0.05) * 50, 0.02, i));
+      }
+      const curve = new THREE.CatmullRomCurve3(points);
+      const trackGeo = new THREE.TubeGeometry(curve, 100, 18, 12, false);
+      const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+      trackMesh.scale.set(1, 0.01, 1);
+      trackMesh.receiveShadow = true;
+      trackGroup.add(trackMesh);
+    }
+
+    function selectTrack(type) {
+      while (trackGroup.children.length > 0) {
+        trackGroup.remove(trackGroup.children[0]);
+      }
+
+      if (type === 'oval') {
+        buildOvalTrack();
+        carPos.set(85, 0, 0);
+        document.getElementById('track-hud').innerText = 'Track: Oval Speedway';
+      } else if (type === 'figure8') {
+        buildFigure8Track();
+        carPos.set(-60, 0, 50);
+        document.getElementById('track-hud').innerText = 'Track: Figure-8 Circuit';
+      } else if (type === 'alpine') {
+        buildAlpineTrack();
+        carPos.set(0, 0, -140);
+        document.getElementById('track-hud').innerText = 'Track: Alpine Pass';
+      }
+
+      velocity.set(0, 0, 0);
+      carHeading = 0;
+      toggleModal('track-modal');
+    }
+    buildOvalTrack();
+
+    // --- Snowfall System ---
     let isChristmas = false;
     const snowCount = 1200;
     const snowGeo = new THREE.BufferGeometry();
@@ -197,6 +281,51 @@
 
     let headlightsOn = false;
 
+    // Taillights
+    const tailLightGeo = new THREE.BoxGeometry(0.5, 0.2, 0.1);
+    const tailLightMatL = new THREE.MeshBasicMaterial({ color: 0x660000 });
+    const tailLightMatR = new THREE.MeshBasicMaterial({ color: 0x660000 });
+
+    const tailLightL = new THREE.Mesh(tailLightGeo, tailLightMatL);
+    tailLightL.position.set(-0.7, 0.65, -2.1);
+    carGroup.add(tailLightL);
+
+    const tailLightR = new THREE.Mesh(tailLightGeo, tailLightMatR);
+    tailLightR.position.set(0.7, 0.65, -2.1);
+    carGroup.add(tailLightR);
+
+    // 3D Wheels
+    const wheels = [];
+    const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.35, 24);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+    const rimGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.36, 12);
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+
+    const wheelOffsets = [
+      { x: -1.05, y: 0.4, z: 1.3, isFront: true },
+      { x: 1.05, y: 0.4, z: 1.3, isFront: true },
+      { x: -1.05, y: 0.4, z: -1.3, isFront: false },
+      { x: 1.05, y: 0.4, z: -1.3, isFront: false }
+    ];
+
+    wheelOffsets.forEach(pos => {
+      const wheelPivot = new THREE.Group();
+      wheelPivot.position.set(pos.x, pos.y, pos.z);
+
+      const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
+      wheelMesh.rotation.z = Math.PI / 2;
+      wheelMesh.castShadow = true;
+
+      const rimMesh = new THREE.Mesh(rimGeo, rimMat);
+      rimMesh.rotation.z = Math.PI / 2;
+
+      wheelPivot.add(wheelMesh);
+      wheelPivot.add(rimMesh);
+      carGroup.add(wheelPivot);
+
+      wheels.push({ pivot: wheelPivot, mesh: wheelMesh, rim: rimMesh, isFront: pos.isFront });
+    });
+
     // Tire Smoke System
     const smokeParticles = [];
     const smokeGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
@@ -224,7 +353,10 @@
         headlightR.intensity = headlightsOn ? 4 : 0;
       }
       if (e.code === 'KeyC') toggleChristmasEvent();
-      if (e.code === 'Escape') toggleGarage();
+      if (e.code === 'Escape') {
+        document.getElementById('garage-modal').style.display = 'none';
+        document.getElementById('track-modal').style.display = 'none';
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -235,68 +367,88 @@
       if (e.code === 'Space') keys.handbrake = false;
     });
 
-    // --- Vector Physics Variables ---
+    // --- Physics Variables ---
     let carPos = new THREE.Vector3(85, 0, 0);
-    let velocity = new THREE.Vector3(0, 0, 0); // World momentum vector
-    let carHeading = 0; // Body rotation angle
+    let velocity = new THREE.Vector3(0, 0, 0);
+    let carHeading = 0;
     let totalDriftScore = 0;
 
-    // --- Loop ---
+    // --- Main Loop ---
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
-      // Forward & Right vectors relative to car orientation
+      // 1. Day & Night Cycle
+      dayNightTime += dt * 0.05;
+      const sunY = Math.sin(dayNightTime) * 150;
+      sunLight.position.set(100, sunY, Math.cos(dayNightTime) * 150);
+
+      if (sunY > 20) {
+        scene.background = new THREE.Color(0x1a2a3a);
+        ambientLight.intensity = 0.5;
+        document.getElementById('time-hud').innerText = 'Time: Day';
+        document.getElementById('time-hud').style.color = '#f1c40f';
+      } else if (sunY > -10) {
+        scene.background = new THREE.Color(0x3d1e28);
+        ambientLight.intensity = 0.3;
+        document.getElementById('time-hud').innerText = 'Time: Sunset';
+        document.getElementById('time-hud').style.color = '#e67e22';
+      } else {
+        scene.background = new THREE.Color(0x050508);
+        ambientLight.intensity = 0.15;
+        document.getElementById('time-hud').innerText = 'Time: Night';
+        document.getElementById('time-hud').style.color = '#9b59b6';
+      }
+
+      // 2. Taillight / Brake Lights
+      const isBraking = keys.backward;
+      tailLightMatL.color.setHex(isBraking ? 0xff0000 : 0x660000);
+      tailLightMatR.color.setHex(isBraking ? 0xff0000 : 0x660000);
+
+      // 3. Vector Physics & Steering
       const forwardDir = new THREE.Vector3(Math.sin(carHeading), 0, Math.cos(carHeading));
       const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
 
-      // 1. Steering & Body Yaw Rotation
       const turnInput = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
       const currentSpeed = velocity.length();
 
       if (currentSpeed > 1.0) {
-        // High-speed yaw rotation (counter-steering mechanics)
         const yawRate = turnInput * steeringSensitivity * dt * (keys.handbrake ? 1.5 : 1.0);
         carHeading += yawRate;
       }
 
-      // 2. Engine Thrust Acceleration
-      if (keys.forward) {
-        velocity.addScaledVector(forwardDir, enginePower * dt);
-      }
-      if (keys.backward) {
-        velocity.addScaledVector(forwardDir, -enginePower * 0.5 * dt);
-      }
+      // 4. Wheels Animation
+      wheels.forEach(w => {
+        if (w.isFront) w.pivot.rotation.y = turnInput * 0.4;
+        w.mesh.rotation.x += currentSpeed * dt * 2.5;
+        w.rim.rotation.x += currentSpeed * dt * 2.5;
+      });
 
-      // 3. De-coupled Tire Physics (Friction Separation)
-      // Break momentum into forward velocity vs sideways slide velocity
+      // 5. Engine & Friction
+      if (keys.forward) velocity.addScaledVector(forwardDir, enginePower * dt);
+      if (keys.backward) velocity.addScaledVector(forwardDir, -enginePower * 0.5 * dt);
+
       const forwardVelocity = forwardDir.clone().multiplyScalar(velocity.dot(forwardDir));
       const lateralVelocity = rightDir.clone().multiplyScalar(velocity.dot(rightDir));
 
-      // Lateral grip drops significantly when holding handbrake or sliding fast
       let currentGrip = keys.handbrake ? 0.25 : tireGrip;
-      if (isChristmas) currentGrip *= 0.7; // Snow track reduces grip
+      if (isChristmas) currentGrip *= 0.7;
 
-      // Recombine momentum vector with reduced lateral friction (creates true drift slide)
       velocity = forwardVelocity.add(lateralVelocity.multiplyScalar(currentGrip));
-      velocity.multiplyScalar(0.985); // Air resistance / Drag
+      velocity.multiplyScalar(0.985);
 
-      // Move car by world velocity vector
       carPos.addScaledVector(velocity, dt);
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      // 4. Calculate Slip Angle & Sideways Slide Intensity
-      const lateralSpeed = Math.abs(velocity.dot(rightDir));
-      const isDrifting = currentSpeed > 8 && lateralSpeed > 2.5;
-
-      // Body roll tilt visual effect
+      // Body roll
       carBody.rotation.z = velocity.dot(rightDir) * 0.02;
 
-      // 5. Tire Smoke & Drift Scoring
-      if (isDrifting) {
+      // 6. Smoke & Drift Points
+      const lateralSpeed = Math.abs(velocity.dot(rightDir));
+      if (currentSpeed > 8 && lateralSpeed > 2.5) {
         createSmoke(carPos.x - forwardDir.x * 1.5, carPos.z - forwardDir.z * 1.5);
         
         const multiplier = isChristmas ? 2 : 1;
@@ -327,7 +479,7 @@
         snowParticles.geometry.attributes.position.needsUpdate = true;
       }
 
-      // Camera Follow
+      // Camera Tracking
       const cameraOffset = new THREE.Vector3(0, 5, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
       camera.position.lerp(carPos.clone().add(cameraOffset), 0.1);
       camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 3).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
@@ -341,8 +493,8 @@
     }
 
     // --- UI Controls ---
-    function toggleGarage() {
-      const m = document.getElementById('garage-modal');
+    function toggleModal(id) {
+      const m = document.getElementById(id);
       m.style.display = m.style.display === 'block' ? 'none' : 'block';
     }
 
