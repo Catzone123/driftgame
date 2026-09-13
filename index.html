@@ -67,7 +67,7 @@
       <button class="btn-buy" onclick="selectTrack('figure8')">Select</button>
     </div>
     <div class="shop-item">
-      <span>3. Alpine Pass (3D Elevation & Banked Hairpins)</span>
+      <span>3. Alpine Pass (3D Endless Circuit)</span>
       <button class="btn-buy" onclick="selectTrack('alpine')">Select</button>
     </div>
   </div>
@@ -108,10 +108,11 @@
     let steeringSensitivity = 2.8;
     let tireGrip = 0.88;
     let ownedCarType = 'Standard';
+    let currentTrackType = 'oval';
 
     // --- Scene Setup ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x050508, 0.002);
+    scene.fog = new THREE.FogExp2(0x70a1ff, 0.002);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -121,17 +122,18 @@
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
     // --- Lighting Setup ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xffd8a8, 1.0);
+    const sunLight = new THREE.DirectionalLight(0xffd8a8, 1.2);
     sunLight.position.set(100, 150, 50);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     scene.add(sunLight);
 
-    let dayNightTime = 0;
+    // Start in full daylight (Math.PI / 2)
+    let dayNightTime = Math.PI / 2;
 
     // --- Ground & Track Management ---
     const trackGroup = new THREE.Group();
@@ -198,16 +200,16 @@
       
       for (let i = 0; i <= numPoints; i++) {
         const t = i / numPoints;
-        const angle = t * Math.PI * 6;
+        const angle = t * Math.PI * 2;
         
-        const x = Math.sin(angle) * (180 + Math.sin(t * 10) * 90);
-        const z = Math.cos(angle) * (280 + Math.cos(t * 8) * 110);
-        const y = Math.sin(t * Math.PI * 4) * 35 + Math.cos(t * Math.PI * 2) * 15;
+        const x = Math.sin(angle) * (180 + Math.sin(angle * 3) * 60);
+        const z = Math.cos(angle) * (280 + Math.cos(angle * 2) * 80);
+        const y = Math.sin(angle * 4) * 30 + Math.cos(angle * 2) * 15;
         
         curvePoints.push(new THREE.Vector3(x, y, z));
       }
 
-      const curve = new THREE.CatmullRomCurve3(curvePoints, true);
+      const curve = new THREE.CatmullRomCurve3(curvePoints, true); // Closed loop curve
       
       const trackWidth = 24;
       const segments = 500;
@@ -222,7 +224,7 @@
         const up = new THREE.Vector3(0, 1, 0);
         const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
         
-        const bankAngle = Math.sin(u * Math.PI * 12) * 0.25; 
+        const bankAngle = Math.sin(u * Math.PI * 8) * 0.2; 
         right.applyAxisAngle(tangent, bankAngle);
 
         const leftEdge = point.clone().addScaledVector(right, -trackWidth / 2);
@@ -250,6 +252,7 @@
     }
 
     function selectTrack(type) {
+      currentTrackType = type;
       while (trackGroup.children.length > 0) {
         trackGroup.remove(trackGroup.children[0]);
       }
@@ -264,7 +267,7 @@
         document.getElementById('track-hud').innerText = 'Track: Figure-8 Circuit';
       } else if (type === 'alpine') {
         buildAlpineTrack();
-        carPos.set(0, 15, -390);
+        carPos.set(0, 15, -360);
         document.getElementById('track-hud').innerText = 'Track: Alpine Pass';
       }
 
@@ -281,9 +284,9 @@
     const snowPos = new Float32Array(snowCount * 3);
 
     for (let i = 0; i < snowCount * 3; i += 3) {
-      snowPos[i] = (Math.random() - 0.5) * 400;
+      snowPos[i] = (Math.random() - 0.5) * 600;
       snowPos[i + 1] = Math.random() * 100;
-      snowPos[i + 2] = (Math.random() - 0.5) * 400;
+      snowPos[i + 2] = (Math.random() - 0.5) * 600;
     }
     snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
     const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0 });
@@ -309,15 +312,15 @@
     carGroup.add(cabin);
 
     // Headlights
-    const headlightL = new THREE.SpotLight(0xfffaed, 0, 100, Math.PI / 5, 0.3);
+    const headlightL = new THREE.SpotLight(0xfffaed, 0, 120, Math.PI / 5, 0.3);
     headlightL.position.set(-0.7, 0.6, 2.1);
-    headlightL.target.position.set(-0.7, 0, 15);
+    headlightL.target.position.set(-0.7, 0, 20);
     carGroup.add(headlightL);
     carGroup.add(headlightL.target);
 
     const headlightR = headlightL.clone();
     headlightR.position.x = 0.7;
-    headlightR.target.position.set(0.7, 0, 15);
+    headlightR.target.position.set(0.7, 0, 20);
     carGroup.add(headlightR);
     carGroup.add(headlightR.target);
 
@@ -391,8 +394,8 @@
       if (e.code === 'Space') keys.handbrake = true;
       if (e.code === 'KeyH') {
         headlightsOn = !headlightsOn;
-        headlightL.intensity = headlightsOn ? 5 : 0;
-        headlightR.intensity = headlightsOn ? 5 : 0;
+        headlightL.intensity = headlightsOn ? 6 : 0;
+        headlightR.intensity = headlightsOn ? 6 : 0;
       }
       if (e.code === 'KeyC') toggleChristmasEvent();
       if (e.code === 'Escape') {
@@ -415,6 +418,13 @@
     let carHeading = 0;
     let totalDriftScore = 0;
 
+    // Boundary wrapping for infinite track driving
+    function handleEndlessTrackBounds() {
+      const boundLimit = 550;
+      if (Math.abs(carPos.x) > boundLimit) carPos.x *= -0.95;
+      if (Math.abs(carPos.z) > boundLimit) carPos.z *= -0.95;
+    }
+
     // --- Main Loop ---
     const clock = new THREE.Clock();
 
@@ -422,28 +432,31 @@
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
-      // 1. Day & Night Cycle Sync Fix
+      // 1. Day & Night Cycle Sync
       dayNightTime += dt * 0.05;
       const sunY = Math.sin(dayNightTime) * 150;
       sunLight.position.set(100, sunY, Math.cos(dayNightTime) * 150);
 
       const timeHud = document.getElementById('time-hud');
 
-      if (sunY > 30) {
-        scene.background = new THREE.Color(0x1a2a3a);
-        scene.fog.color.setHex(0x1a2a3a);
-        ambientLight.intensity = 0.6;
-        sunLight.intensity = 1.0;
+      if (sunY > 20) {
+        // Day
+        scene.background = new THREE.Color(0x70a1ff);
+        scene.fog.color.setHex(0x70a1ff);
+        ambientLight.intensity = 0.7;
+        sunLight.intensity = 1.2;
         timeHud.innerText = 'Time: Day';
         timeHud.style.color = '#f1c40f';
       } else if (sunY > -10) {
-        scene.background = new THREE.Color(0x3d1e28);
-        scene.fog.color.setHex(0x3d1e28);
-        ambientLight.intensity = 0.3;
-        sunLight.intensity = 0.4;
+        // Sunset
+        scene.background = new THREE.Color(0xe17055);
+        scene.fog.color.setHex(0xe17055);
+        ambientLight.intensity = 0.35;
+        sunLight.intensity = 0.5;
         timeHud.innerText = 'Time: Sunset';
         timeHud.style.color = '#e67e22';
       } else {
+        // Night
         scene.background = new THREE.Color(0x020205);
         scene.fog.color.setHex(0x020205);
         ambientLight.intensity = 0.05;
@@ -457,7 +470,7 @@
       tailLightMatL.color.setHex(isBraking ? 0xff0000 : 0x660000);
       tailLightMatR.color.setHex(isBraking ? 0xff0000 : 0x660000);
 
-      // 3. Physics & Steering
+      // 3. Vector Physics & Steering
       const forwardDir = new THREE.Vector3(Math.sin(carHeading), 0, Math.cos(carHeading));
       const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
 
@@ -490,13 +503,35 @@
       velocity.multiplyScalar(0.985);
 
       carPos.addScaledVector(velocity, dt);
+      handleEndlessTrackBounds();
+
+      // 6. Dynamic 3D Raycasting Surface & Elevation
+      const raycaster = new THREE.Raycaster(
+        new THREE.Vector3(carPos.x, carPos.y + 50, carPos.z),
+        new THREE.Vector3(0, -1, 0)
+      );
+
+      const intersects = raycaster.intersectObjects(trackGroup.children, true);
+
+      if (intersects.length > 0) {
+        const hit = intersects[0];
+        carPos.y = THREE.MathUtils.lerp(carPos.y, hit.point.y, 0.2);
+        
+        const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+        const up = new THREE.Vector3(0, 1, 0);
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(up, normal);
+        carGroup.quaternion.slerp(quaternion, 0.15);
+      } else {
+        carPos.y = THREE.MathUtils.lerp(carPos.y, 0, 0.1);
+      }
+
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
       // Body Roll
       carBody.rotation.z = velocity.dot(rightDir) * 0.02;
 
-      // 6. Smoke & Drift
+      // 7. Smoke & Drift
       const lateralSpeed = Math.abs(velocity.dot(rightDir));
       if (currentSpeed > 8 && lateralSpeed > 2.5) {
         createSmoke(carPos.x - forwardDir.x * 1.5, carPos.y, carPos.z - forwardDir.z * 1.5);
