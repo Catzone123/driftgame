@@ -59,7 +59,7 @@
     <button class="close-btn" onclick="toggleModal('track-modal')">✕</button>
     <div class="modal-title">Select Drift Track</div>
     <div class="shop-item">
-      <span>1. Touge Mountain Pass (Alpine Cliffside)</span>
+      <span>1. Touge Mountain Pass (Alpine Range)</span>
       <button class="btn-buy" onclick="selectTrack('alpine')">Select</button>
     </div>
     <div class="shop-item">
@@ -123,9 +123,9 @@
 
     // --- Scene & Camera ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x70a1ff, 0.002);
+    scene.fog = new THREE.FogExp2(0x5c7185, 0.0015);
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
@@ -133,11 +133,11 @@
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
     // --- Lighting ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xffd8a8, 1.2);
-    sunLight.position.set(100, 150, 50);
+    const sunLight = new THREE.DirectionalLight(0xffd8a8, 1.3);
+    sunLight.position.set(200, 300, 100);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
@@ -145,13 +145,51 @@
 
     let dayNightTime = Math.PI / 2;
 
+    // --- Materials ---
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.6, metalness: 0.1, side: THREE.DoubleSide });
+    const mountainMat = new THREE.MeshStandardMaterial({ color: 0x3d4147, roughness: 0.95, flatShading: true });
+    const rockWallMat = new THREE.MeshStandardMaterial({ color: 0x2c2e33, roughness: 0.9 });
+
+    // --- Procedural 3D Mountain Terrain Generation ---
+    const terrainGroup = new THREE.Group();
+    scene.add(terrainGroup);
+
+    function createMountainTerrain() {
+      while (terrainGroup.children.length > 0) terrainGroup.remove(terrainGroup.children[0]);
+
+      const terrainGeo = new THREE.PlaneGeometry(1600, 1600, 120, 120);
+      terrainGeo.rotateX(-Math.PI / 2);
+
+      const positions = terrainGeo.attributes.position.array;
+
+      for (let i = 0; i < positions.length; i += 3) {
+        const x = positions[i];
+        const z = positions[i + 2];
+
+        // Harmonic sine wave overlay for mountains & peaks
+        let height = Math.sin(x * 0.008) * Math.cos(z * 0.008) * 120;
+        height += Math.sin(x * 0.02 + 1.5) * Math.cos(z * 0.02 + 1.2) * 50;
+        height += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 15;
+
+        // Flatten center plateau near starting track base
+        const distFromCenter = Math.sqrt(x * x + z * z);
+        if (distFromCenter < 250) {
+          const factor = distFromCenter / 250;
+          height *= Math.pow(factor, 2);
+        }
+
+        positions[i + 1] = height - 10;
+      }
+
+      terrainGeo.computeVertexNormals();
+      const terrainMesh = new THREE.Mesh(terrainGeo, mountainMat);
+      terrainMesh.receiveShadow = true;
+      terrainGroup.add(terrainMesh);
+    }
+
     // --- Track Construction ---
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
-
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.5, metalness: 0.1, side: THREE.DoubleSide });
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a3b3c, roughness: 0.9 });
-    const grassMat = new THREE.MeshStandardMaterial({ color: 0x1e381e, roughness: 0.9 });
 
     function buildAlpinePassTrack() {
       const curvePoints = [];
@@ -161,10 +199,10 @@
         const t = i / numPoints;
         const angle = t * Math.PI * 2;
         
-        // Touge style sharp twists and elevation drops
-        const x = Math.sin(angle) * 220 + Math.sin(angle * 4) * 70;
-        const z = Math.cos(angle) * 300 + Math.cos(angle * 3) * 90;
-        const y = Math.sin(angle * 3) * 45 + Math.cos(angle * 2) * 25;
+        // Touge style sharp twists and steep mountain elevation drops
+        const x = Math.sin(angle) * 260 + Math.sin(angle * 4) * 80;
+        const z = Math.cos(angle) * 340 + Math.cos(angle * 3) * 110;
+        const y = Math.sin(angle * 3) * 55 + Math.cos(angle * 2) * 35 + 20;
         
         curvePoints.push(new THREE.Vector3(x, y, z));
       }
@@ -174,7 +212,7 @@
       const segments = 600;
 
       const trackGeo = new THREE.BufferGeometry();
-      const pos = [], normals = [], uvs = [];
+      const pos = [];
 
       for (let i = 0; i <= segments; i++) {
         const u = i / segments;
@@ -183,7 +221,7 @@
         const up = new THREE.Vector3(0, 1, 0);
         const right = new THREE.Vector3().crossVectors(tan, up).normalize();
         
-        // Hairpin banking
+        // Banking angles for high speed hairpins
         const bankAngle = Math.sin(u * Math.PI * 12) * 0.35;
         right.applyAxisAngle(tan, bankAngle);
 
@@ -192,15 +230,16 @@
 
         pos.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
 
-        // FR Legends Cliff Wall mesh generation
-        if (i % 3 === 0) {
-          const wallHeight = 12 + Math.random() * 8;
-          const wallGeo = new THREE.BoxGeometry(4, wallHeight, 10);
-          const cliff = new THREE.Mesh(wallGeo, rockMat);
+        // Cliffside rock pillars along the touge curve
+        if (i % 4 === 0) {
+          const cliffHeight = 25 + Math.random() * 20;
+          const cliffGeo = new THREE.BoxGeometry(6, cliffHeight, 14);
+          const cliff = new THREE.Mesh(cliffGeo, rockWallMat);
           const wallSide = (i % 2 === 0) ? -1 : 1;
-          const cliffPos = pt.clone().addScaledVector(right, (trackWidth / 2 + 6) * wallSide);
-          cliff.position.set(cliffPos.x, cliffPos.y + wallHeight / 2, cliffPos.z);
+          const cliffPos = pt.clone().addScaledVector(right, (trackWidth / 2 + 8) * wallSide);
+          cliff.position.set(cliffPos.x, cliffPos.y + cliffHeight / 2 - 5, cliffPos.z);
           cliff.rotation.y = Math.atan2(tan.x, tan.z);
+          cliff.castShadow = true;
           trackGroup.add(cliff);
         }
       }
@@ -256,7 +295,7 @@
 
       if (type === 'alpine') {
         buildAlpinePassTrack();
-        carPos.set(0, 20, -360);
+        carPos.set(0, 35, -410);
         document.getElementById('track-hud').innerText = 'Track: Touge Mountain Pass';
       } else if (type === 'figure8') {
         buildEbisuTrack();
@@ -273,12 +312,7 @@
       toggleModal('track-modal');
     }
 
-    // Ground Plane
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), grassMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.5;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    createMountainTerrain();
 
     // --- Dynamic Car Models & Active Aero ---
     const carGroup = new THREE.Group();
@@ -311,7 +345,6 @@
       carGroup.add(cabin);
 
       // Realistic Rear LED Brake Light Bar
-      const tailLightGroup = new THREE.Group();
       const redLEDMat = new THREE.MeshBasicMaterial({ color: 0x330000 });
       const ledBarGeo = new THREE.BoxGeometry(0.8, 0.12, 0.1);
 
@@ -320,7 +353,6 @@
       const tailR = new THREE.Mesh(ledBarGeo, redLEDMat);
       tailR.position.set(0.6, 0.65, -2.11);
 
-      // PointLight glow for braking
       const brakeGlow = new THREE.PointLight(0xff0000, 0, 8);
       brakeGlow.position.set(0, 0.65, -2.2);
 
@@ -336,7 +368,7 @@
       carGroup.add(headR); carGroup.add(headR.target);
       headlights.push(headL, headR);
 
-      // Optional Active Aero Spoiler Wing
+      // Active Aero Spoiler Wing
       if (hasActiveAero) {
         const spoilerGroup = new THREE.Group();
         spoilerGroup.position.set(0, 1.0, -1.8);
@@ -400,7 +432,7 @@
     buildAlpinePassTrack();
     buildCarModel('s13');
 
-    // --- Inputs & Controls ---
+    // --- Controls ---
     const keys = { forward: false, backward: false, left: false, right: false, handbrake: false };
     let headlightsOn = false;
 
@@ -429,7 +461,7 @@
     });
 
     // --- Physics ---
-    let carPos = new THREE.Vector3(0, 20, -360);
+    let carPos = new THREE.Vector3(0, 35, -410);
     let velocity = new THREE.Vector3(0, 0, 0);
     let carHeading = 0;
     let totalDriftScore = 0;
@@ -442,13 +474,13 @@
 
       // Day/Night Cycle
       dayNightTime += dt * 0.03;
-      const sunY = Math.sin(dayNightTime) * 150;
-      sunLight.position.set(100, sunY, Math.cos(dayNightTime) * 150);
+      const sunY = Math.sin(dayNightTime) * 300;
+      sunLight.position.set(200, sunY, Math.cos(dayNightTime) * 200);
 
       if (sunY > 20) {
-        scene.background = new THREE.Color(0x70a1ff);
-        scene.fog.color.setHex(0x70a1ff);
-        ambientLight.intensity = 0.7; sunLight.intensity = 1.2;
+        scene.background = new THREE.Color(0x5c7185);
+        scene.fog.color.setHex(0x5c7185);
+        ambientLight.intensity = 0.6; sunLight.intensity = 1.3;
       } else {
         scene.background = new THREE.Color(0x020205);
         scene.fog.color.setHex(0x020205);
@@ -465,15 +497,13 @@
         carHeading += turnInput * steeringSensitivity * dt * (keys.handbrake ? 1.4 : 1.0);
       }
 
-      // Acceleration & Active Airbrake
+      // Acceleration & Airbrake
       if (keys.forward) velocity.addScaledVector(forwardDir, enginePower * dt);
       if (keys.backward) {
         velocity.addScaledVector(forwardDir, -enginePower * 0.6 * dt);
         
-        // Active Aero Wing Airbrake Pitch
         if (spoilerFlap) spoilerFlap.rotation.x = THREE.MathUtils.lerp(spoilerFlap.rotation.x, -Math.PI / 4, 0.2);
         
-        // Dynamic Brake Light Illumination
         brakeLEDs[0].material.color.setHex(0xff0000);
         brakeLEDs[1].material.color.setHex(0xff0000);
         brakeLEDs[2].intensity = 3.0;
@@ -491,13 +521,13 @@
       velocity.multiplyScalar(0.985);
       carPos.addScaledVector(velocity, dt);
 
-      // Raycasting Mountain Topography
-      const raycaster = new THREE.Raycaster(new THREE.Vector3(carPos.x, carPos.y + 50, carPos.z), new THREE.Vector3(0, -1, 0));
-      const hits = raycaster.intersectObjects(trackGroup.children, true);
+      // Topography Surface Detection
+      const raycaster = new THREE.Raycaster(new THREE.Vector3(carPos.x, carPos.y + 60, carPos.z), new THREE.Vector3(0, -1, 0));
+      const hits = raycaster.intersectObjects([...trackGroup.children, ...terrainGroup.children], true);
 
       if (hits.length > 0) {
         const hit = hits[0];
-        carPos.y = THREE.MathUtils.lerp(carPos.y, hit.point.y, 0.2);
+        carPos.y = THREE.MathUtils.lerp(carPos.y, hit.point.y, 0.25);
         const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
         const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
         carGroup.quaternion.slerp(quat, 0.15);
@@ -508,7 +538,7 @@
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      // Drift Calculations & HUD
+      // Drift Calculations & Score
       const lateralSpeed = Math.abs(velocity.dot(rightDir));
       if (currentSpeed > 6 && lateralSpeed > 2.0) {
         const points = Math.floor(lateralSpeed * currentSpeed * 6 * dt);
@@ -521,7 +551,7 @@
       camera.position.lerp(carPos.clone().add(camOffset), 0.12);
       camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 2).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
 
-      // HUD Update
+      // HUD Updates
       document.getElementById('speedometer').innerText = `Speed: ${Math.round(currentSpeed * 3.6)} km/h`;
       document.getElementById('drift-score').innerText = `Drift Points: ${Math.floor(totalDriftScore)}`;
       document.getElementById('credits-hud').innerText = `Credits: $${playerCredits}`;
