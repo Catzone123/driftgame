@@ -166,12 +166,10 @@
         const x = positions[i];
         const z = positions[i + 2];
 
-        // Harmonic sine wave overlay for mountains & peaks
         let height = Math.sin(x * 0.008) * Math.cos(z * 0.008) * 120;
         height += Math.sin(x * 0.02 + 1.5) * Math.cos(z * 0.02 + 1.2) * 50;
         height += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 15;
 
-        // Flatten center plateau near starting track base
         const distFromCenter = Math.sqrt(x * x + z * z);
         if (distFromCenter < 250) {
           const factor = distFromCenter / 250;
@@ -199,7 +197,6 @@
         const t = i / numPoints;
         const angle = t * Math.PI * 2;
         
-        // Touge style sharp twists and steep mountain elevation drops
         const x = Math.sin(angle) * 260 + Math.sin(angle * 4) * 80;
         const z = Math.cos(angle) * 340 + Math.cos(angle * 3) * 110;
         const y = Math.sin(angle * 3) * 55 + Math.cos(angle * 2) * 35 + 20;
@@ -221,7 +218,6 @@
         const up = new THREE.Vector3(0, 1, 0);
         const right = new THREE.Vector3().crossVectors(tan, up).normalize();
         
-        // Banking angles for high speed hairpins
         const bankAngle = Math.sin(u * Math.PI * 12) * 0.35;
         right.applyAxisAngle(tan, bankAngle);
 
@@ -230,7 +226,6 @@
 
         pos.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
 
-        // Cliffside rock pillars along the touge curve
         if (i % 4 === 0) {
           const cliffHeight = 25 + Math.random() * 20;
           const cliffGeo = new THREE.BoxGeometry(6, cliffHeight, 14);
@@ -313,6 +308,18 @@
     }
 
     createMountainTerrain();
+
+    // --- Smoke Particle System ---
+    const smokeParticles = [];
+    const smokeGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+
+    function createSmoke(x, y, z) {
+      const smokeMat = new THREE.MeshBasicMaterial({ color: 0xdddddd, transparent: true, opacity: 0.6 });
+      const p = new THREE.Mesh(smokeGeo, smokeMat);
+      p.position.set(x + (Math.random() - 0.5) * 0.6, y + 0.2, z + (Math.random() - 0.5) * 0.6);
+      scene.add(p);
+      smokeParticles.push({ mesh: p, life: 1.0 });
+    }
 
     // --- Dynamic Car Models & Active Aero ---
     const carGroup = new THREE.Group();
@@ -538,12 +545,27 @@
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      // Drift Calculations & Score
+      // Drift Calculations, Smoke Spawn & Score
       const lateralSpeed = Math.abs(velocity.dot(rightDir));
-      if (currentSpeed > 6 && lateralSpeed > 2.0) {
+      if (currentSpeed > 5 && lateralSpeed > 2.0) {
+        // Spawn smoke from rear tires
+        createSmoke(carPos.x - forwardDir.x * 1.5, carPos.y, carPos.z - forwardDir.z * 1.5);
+
         const points = Math.floor(lateralSpeed * currentSpeed * 6 * dt);
         totalDriftScore += points;
         playerCredits += Math.floor(points * 0.05);
+      }
+
+      // Update Smoke Particles
+      for (let i = smokeParticles.length - 1; i >= 0; i--) {
+        const p = smokeParticles[i];
+        p.life -= dt * 1.5;
+        p.mesh.scale.addScalar(dt * 1.8);
+        p.mesh.material.opacity = p.life * 0.5;
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          smokeParticles.splice(i, 1);
+        }
       }
 
       // Camera Follow
