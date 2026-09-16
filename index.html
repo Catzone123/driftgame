@@ -40,17 +40,8 @@
     .shop-item { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; }
     .btn-buy { background: #00b894; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 18px; cursor: pointer; }
-    
-    .account-input {
-      width: 90%; padding: 10px; margin: 8px 0; border-radius: 4px;
-      border: 1px solid #444; background: #222; color: #fff; font-size: 14px;
-    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -63,7 +54,7 @@
     <div class="hud-stat" id="drift-score">Drift Points: 0</div>
     <div class="hud-stat" id="credits-hud">Credits: $500</div>
     <div class="hud-stat" id="track-hud" style="color: #74b9ff;">Track: Squeak Squeak Touge 🐭</div>
-    <div class="hud-stat" id="car-hud" style="color: #fd79a8;">Car: Aero Sil-80 (Low-Poly Spec)</div>
+    <div class="hud-stat" id="car-hud" style="color: #fd79a8;">Car: Aero Sil-80 (Active Wing Spec)</div>
     <div class="hud-stat" id="mp-status" style="color: #a29bfe;">MP: Offline</div>
     <div class="hud-stat" style="margin-top: 6px;">Car Durability:</div>
     <div id="health-bar-container"><div id="health-bar"></div></div>
@@ -73,40 +64,6 @@
   <button class="top-btn" id="track-btn" onclick="toggleModal('track-modal')">TRACKS</button>
   <button class="top-btn" id="garage-btn" onclick="toggleModal('garage-modal')">GARAGE</button>
   <button class="top-btn" id="account-btn" onclick="toggleModal('account-modal')">LOGIN / REGISTER</button>
-
-  <!-- Account Modal -->
-  <div class="modal" id="account-modal">
-    <button class="close-btn" onclick="toggleModal('account-modal')">✕</button>
-    <div class="modal-title">Account & Cloud Save</div>
-    <div id="auth-forms">
-      <input type="email" id="auth-email" class="account-input" placeholder="Email Address" /><br>
-      <input type="password" id="auth-password" class="account-input" placeholder="Password" /><br><br>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn-buy" style="flex:1;" onclick="handleLogin()">Log In</button>
-        <button class="btn-buy" style="flex:1; background: #0984e3;" onclick="handleRegister()">Register</button>
-      </div>
-      <p id="auth-error" style="color: #ff3366; font-size: 12px; margin-top: 10px;"></p>
-    </div>
-    <div id="auth-logged-in" style="display: none;">
-      <p>Logged in as: <b id="user-email-text" style="color: #00b894;"></b></p>
-      <button class="btn-buy" style="background: #d63031; width: 100%;" onclick="handleLogout()">Log Out</button>
-    </div>
-  </div>
-
-  <!-- Multiplayer Modal -->
-  <div class="modal" id="mp-modal">
-    <button class="close-btn" onclick="toggleModal('mp-modal')">✕</button>
-    <div class="modal-title">Multiplayer Lobby</div>
-    <div class="shop-item">
-      <span>Your Peer ID:</span>
-      <b id="peer-id-display" style="color: #00b894;">Connecting...</b>
-    </div>
-    <hr style="border-color:#333;">
-    <div class="shop-item">
-      <input type="text" id="remote-id-input" class="account-input" placeholder="Enter Friend's Peer ID" style="width: 60%;" />
-      <button class="btn-buy" onclick="connectToPeer()">Join Friend</button>
-    </div>
-  </div>
 
   <!-- Track Selection Modal -->
   <div class="modal" id="track-modal">
@@ -126,105 +83,11 @@
     </div>
   </div>
 
-  <!-- Garage Modal -->
-  <div class="modal" id="garage-modal">
-    <button class="close-btn" onclick="toggleModal('garage-modal')">✕</button>
-    <div class="modal-title">Aerodynamic Low-Poly Fleet</div>
-    <div class="shop-item">
-      <span>Aero Sil-80 (Street Spec)</span>
-      <button class="btn-buy" onclick="selectCar('s13')">Equip</button>
-    </div>
-    <div class="shop-item">
-      <span>Aero GT-R34 (Aggressive Downforce)</span>
-      <button class="btn-buy" onclick="selectCar('gtr')">Equip</button>
-    </div>
-    <hr style="border-color:#333;">
-    <div class="shop-item">
-      <span>Repair Damage</span>
-      <button class="btn-buy" onclick="repairCar()">Repair ($100)</button>
-    </div>
-  </div>
-
   <div id="controls-hint">
     <b>Controls:</b> W/Up = Gas | S/Down = Brake | A/D = Steer | Space = Handbrake
   </div>
 
   <script>
-    // --- Firebase Setup ---
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
-    };
-
-    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-      firebase.initializeApp(firebaseConfig);
-    }
-
-    function handleRegister() {
-      const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value;
-      if (!firebase.apps.length) return alert("Configure Firebase credentials for cloud login.");
-      firebase.auth().createUserWithEmailAndPassword(e, p).then(u => updateAuthUI(u.user)).catch(err => alert(err.message));
-    }
-
-    function handleLogin() {
-      const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value;
-      if (!firebase.apps.length) return alert("Configure Firebase credentials for cloud login.");
-      firebase.auth().signInWithEmailAndPassword(e, p).then(u => updateAuthUI(u.user)).catch(err => alert(err.message));
-    }
-
-    function handleLogout() {
-      if (firebase.apps.length) firebase.auth().signOut().then(() => updateAuthUI(null));
-      else updateAuthUI(null);
-    }
-
-    function updateAuthUI(user) {
-      if (user) {
-        document.getElementById('auth-forms').style.display = 'none';
-        document.getElementById('auth-logged-in').style.display = 'block';
-        document.getElementById('user-email-text').innerText = user.email;
-        document.getElementById('user-display').innerText = `Account: ${user.email.split('@')[0]}`;
-      } else {
-        document.getElementById('auth-forms').style.display = 'block';
-        document.getElementById('auth-logged-in').style.display = 'none';
-        document.getElementById('user-display').innerText = 'Account: Guest';
-      }
-    }
-
-    // --- PeerJS Multiplayer Setup ---
-    let peer = null, conn = null, opponentCarGroup = null;
-    function initMultiplayer() {
-      peer = new Peer();
-      peer.on('open', id => document.getElementById('peer-id-display').innerText = id);
-      peer.on('connection', connection => { conn = connection; setupDataConnection(); });
-    }
-    function connectToPeer() {
-      const id = document.getElementById('remote-id-input').value.trim();
-      if (id) { conn = peer.connect(id); setupDataConnection(); }
-    }
-    function setupDataConnection() {
-      conn.on('open', () => {
-        document.getElementById('mp-status').innerText = 'MP: Connected 🟢';
-        toggleModal('mp-modal');
-        createOpponentCar();
-      });
-      conn.on('data', data => {
-        if (opponentCarGroup && data.position) {
-          opponentCarGroup.position.set(data.position.x, data.position.y, data.position.z);
-          opponentCarGroup.rotation.y = data.rotation;
-        }
-      });
-    }
-
-    function createOpponentCar() {
-      if (opponentCarGroup) scene.remove(opponentCarGroup);
-      opponentCarGroup = buildLowPolyAeroCar(0x6c5ce7);
-      scene.add(opponentCarGroup);
-    }
-
     // --- 3D Scene Setup ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x1a1a24, 0.0015);
@@ -234,18 +97,22 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
     const sun = new THREE.DirectionalLight(0xffe2a3, 1.2);
     sun.position.set(100, 200, 100);
     scene.add(sun);
 
-    // --- Low-Poly Aerodynamic Car Builder ---
+    // --- Active Aero Wing Car Builder ---
+    let activeWingMesh = null;
+
     function buildLowPolyAeroCar(colorHex = 0xd63031) {
       const car = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, flatShading: true, roughness: 0.3 });
       const darkMat = new THREE.MeshStandardMaterial({ color: 0x111116, flatShading: true });
       const glassMat = new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.1 });
+      const carbonMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.2 });
 
+      // Body Frame
       const bodyGeo = new THREE.CylinderGeometry(0.9, 1.15, 4.2, 6);
       bodyGeo.rotateX(Math.PI / 2);
       const body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -253,6 +120,7 @@
       body.scale.set(1, 0.45, 1);
       car.add(body);
 
+      // Cabin Glass
       const cabinGeo = new THREE.ConeGeometry(0.9, 1.8, 5);
       cabinGeo.rotateX(-Math.PI / 2.3);
       const cabin = new THREE.Mesh(cabinGeo, glassMat);
@@ -260,26 +128,7 @@
       cabin.scale.set(0.9, 0.5, 1);
       car.add(cabin);
 
-      const splitter = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.06, 0.8), darkMat);
-      splitter.position.set(0, 0.35, 2.0);
-      car.add(splitter);
-
-      const skirtL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 2.8), darkMat);
-      skirtL.position.set(1.1, 0.4, 0);
-      const skirtR = skirtL.clone();
-      skirtR.position.x = -1.1;
-      car.add(skirtL, skirtR);
-
-      const wingMountL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 0.2), darkMat);
-      wingMountL.position.set(0.6, 1.1, -1.8);
-      const wingMountR = wingMountL.clone();
-      wingMountR.position.x = -0.6;
-      
-      const wingBlade = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 0.45), bodyMat);
-      wingBlade.position.set(0, 1.3, -1.85);
-      wingBlade.rotation.x = 0.1;
-      car.add(wingMountL, wingMountR, wingBlade);
-
+      // Wheels
       const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.3, 8);
       wheelGeo.rotateZ(Math.PI / 2);
       const wheelPositions = [
@@ -292,25 +141,73 @@
         car.add(wheel);
       });
 
+      // ACTIVE AERO WING ASSEMBLY
+      const wingGroup = new THREE.Group();
+      wingGroup.position.set(0, 1.1, -1.8);
+
+      const standGeo = new THREE.BoxGeometry(0.08, 0.4, 0.2);
+      const leftStand = new THREE.Mesh(standGeo, darkMat);
+      leftStand.position.set(-0.5, 0.2, 0);
+      const rightStand = new THREE.Mesh(standGeo, darkMat);
+      rightStand.position.set(0.5, 0.2, 0);
+      wingGroup.add(leftStand, rightStand);
+
+      const bladeGeo = new THREE.BoxGeometry(2.2, 0.05, 0.4);
+      activeWingMesh = new THREE.Mesh(bladeGeo, carbonMat);
+      activeWingMesh.position.set(0, 0.4, 0);
+      wingGroup.add(activeWingMesh);
+
+      car.add(wingGroup);
       return car;
     }
 
-    // --- Track Generators ---
+    // --- Track Ribbon Mesh Generator ---
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
 
+    function createRibbonTrack(curvePoints, width = 24) {
+      const curve = new THREE.CatmullRomCurve3(curvePoints, true);
+      const points = curve.getSpacedPoints(300);
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const indices = [];
+
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        const nextP = points[(i + 1) % points.length];
+        const dir = new THREE.Vector3().subVectors(nextP, p).normalize();
+        const side = new THREE.Vector3(0, 1, 0).cross(dir).normalize().multiplyScalar(width / 2);
+
+        vertices.push(p.x + side.x, p.y, p.z + side.z);
+        vertices.push(p.x - side.x, p.y, p.z - side.z);
+
+        if (i < points.length - 1) {
+          const base = i * 2;
+          indices.push(base, base + 1, base + 2);
+          indices.push(base + 1, base + 3, base + 2);
+        }
+      }
+
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+
+      const material = new THREE.MeshStandardMaterial({ color: 0x2d3436, side: THREE.DoubleSide, roughness: 0.8 });
+      return new THREE.Mesh(geometry, material);
+    }
+
     function buildSqueakSqueakTouge() {
       const curvePoints = [];
-      for (let i = 0; i <= 160; i++) {
-        const angle = (i / 160) * Math.PI * 2;
-        const x = Math.sin(angle * 5) * 140 + Math.sin(angle) * 180;
-        const z = Math.cos(angle * 2) * 280 + Math.sin(angle * 3) * 60;
-        const y = Math.sin(angle * 4) * 45 + 25;
+      for (let i = 0; i < 120; i++) {
+        const angle = (i / 120) * Math.PI * 2;
+        const x = Math.sin(angle * 3) * 180 + Math.cos(angle) * 80;
+        const z = Math.cos(angle * 2) * 220 + Math.sin(angle * 2) * 40;
+        const y = 0.2;
         curvePoints.push(new THREE.Vector3(x, y, z));
       }
-      const curve = new THREE.CatmullRomCurve3(curvePoints, true);
-      const trackMesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 300, 10, 8, true), new THREE.MeshStandardMaterial({ color: 0x333338, flatShading: true }));
-      trackGroup.add(trackMesh);
+      const roadMesh = createRibbonTrack(curvePoints, 26);
+      trackGroup.add(roadMesh);
+      return curvePoints[0];
     }
 
     function buildDriftArena() {
@@ -323,37 +220,49 @@
     }
 
     function buildHiroshimaTouge() {
-      const curvePoints = [];
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(800, 800),
+        new THREE.MeshStandardMaterial({ color: 0x1e272c, roughness: 0.9 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      trackGroup.add(ground);
+
+      const roadPoints = [];
       for (let i = 0; i <= 100; i++) {
         const t = i / 100;
-        const x = Math.sin(t * Math.PI * 6) * 60 + (t * 80);
-        const z = t * 600 - 300;
-        const y = (1 - t) * 40;
-        curvePoints.push(new THREE.Vector3(x, y, z));
+        const x = Math.sin(t * Math.PI * 8) * 70;
+        const z = (t * 600) - 300;
+        const y = (1 - t) * 25;
+        roadPoints.push(new THREE.Vector3(x, y, z));
       }
-      const curve = new THREE.CatmullRomCurve3(curvePoints, false);
-      const road = new THREE.Mesh(
-        new THREE.TubeGeometry(curve, 200, 8, 8, false),
-        new THREE.MeshStandardMaterial({ color: 0x2d3436, flatShading: true })
-      );
-      trackGroup.add(road);
+      const roadMesh = createRibbonTrack(roadPoints, 20);
+      trackGroup.add(roadMesh);
+      return roadPoints[0];
     }
+
+    let carPos = new THREE.Vector3(0, 0.8, 0);
+    let velocity = new THREE.Vector3();
+    let carHeading = 0;
+    const clock = new THREE.Clock();
 
     function selectTrack(trackType) {
       while (trackGroup.children.length > 0) { trackGroup.remove(trackGroup.children[0]); }
 
       if (trackType === 'squeak') {
-        buildSqueakSqueakTouge();
+        const startPos = buildSqueakSqueakTouge();
         document.getElementById('track-hud').innerText = "Track: Squeak Squeak Touge 🐭";
-        carPos.set(0, 25, -280);
+        carPos.copy(startPos).add(new THREE.Vector3(0, 0.8, 0));
+        carHeading = 0;
       } else if (trackType === 'arena') {
         buildDriftArena();
         document.getElementById('track-hud').innerText = "Track: Ebisu Drift Arena 🏎️";
-        carPos.set(0, 1, 0);
+        carPos.set(0, 0.8, 0);
+        carHeading = 0;
       } else if (trackType === 'touge') {
-        buildHiroshimaTouge();
+        const startPos = buildHiroshimaTouge();
         document.getElementById('track-hud').innerText = "Track: Hiroshima Mountain Pass ⛰️";
-        carPos.set(0, 42, -300);
+        carPos.copy(startPos).add(new THREE.Vector3(0, 0.8, 0));
+        carHeading = 0;
       }
 
       velocity.set(0, 0, 0);
@@ -362,41 +271,24 @@
 
     let carGroup = buildLowPolyAeroCar(0xd63031);
     scene.add(carGroup);
-    buildSqueakSqueakTouge();
-    initMultiplayer();
+    selectTrack('squeak');
 
-    function selectCar(type) {
-      scene.remove(carGroup);
-      if (type === 'gtr') {
-        carGroup = buildLowPolyAeroCar(0x0984e3);
-        document.getElementById('car-hud').innerText = "Car: Aero GT-R34 (Low-Poly Spec)";
-      } else {
-        carGroup = buildLowPolyAeroCar(0xd63031);
-        document.getElementById('car-hud').innerText = "Car: Aero Sil-80 (Low-Poly Spec)";
-      }
-      scene.add(carGroup);
-      toggleModal('garage-modal');
-    }
-
-    // --- Controls & Loop ---
-    const keys = { forward: false, backward: false, left: false, right: false };
+    // Controls
+    const keys = { forward: false, backward: false, left: false, right: false, handbrake: false };
     window.addEventListener('keydown', e => {
       if (['ArrowUp', 'KeyW'].includes(e.code)) keys.forward = true;
       if (['ArrowDown', 'KeyS'].includes(e.code)) keys.backward = true;
       if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = true;
       if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = true;
+      if (e.code === 'Space') keys.handbrake = true;
     });
     window.addEventListener('keyup', e => {
       if (['ArrowUp', 'KeyW'].includes(e.code)) keys.forward = false;
       if (['ArrowDown', 'KeyS'].includes(e.code)) keys.backward = false;
       if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = false;
       if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = false;
+      if (e.code === 'Space') keys.handbrake = false;
     });
-
-    let carPos = new THREE.Vector3(0, 25, -280);
-    let velocity = new THREE.Vector3();
-    let carHeading = 0;
-    const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
@@ -409,14 +301,17 @@
       if (keys.forward) velocity.addScaledVector(forwardDir, 45 * dt);
       if (keys.backward) velocity.addScaledVector(forwardDir, -25 * dt);
 
-      velocity.multiplyScalar(0.985);
+      velocity.multiplyScalar(keys.handbrake ? 0.94 : 0.985);
       carPos.addScaledVector(velocity, dt);
 
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      if (conn && conn.open) {
-        conn.send({ position: { x: carPos.x, y: carPos.y, z: carPos.z }, rotation: carHeading });
+      // Active Aero Wing Animation
+      if (activeWingMesh) {
+        const isBraking = keys.backward || keys.handbrake;
+        const targetRotation = isBraking ? -Math.PI / 4 : 0;
+        activeWingMesh.rotation.x = THREE.MathUtils.lerp(activeWingMesh.rotation.x, targetRotation, 0.2);
       }
 
       const camOffset = new THREE.Vector3(0, 4.8, -11).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
@@ -428,10 +323,8 @@
 
     function toggleModal(id) {
       const m = document.getElementById(id);
-      m.style.display = m.style.display === 'block' ? 'none' : 'block';
+      if (m) m.style.display = m.style.display === 'block' ? 'none' : 'block';
     }
-
-    function repairCar() { alert("Car restored to 100% durability!"); }
 
     animate();
   </script>
