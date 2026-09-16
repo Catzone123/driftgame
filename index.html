@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>3D Drift Simulator - FR Legends Edition</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #87ceeb; }
     #canvas-container { width: 100vw; height: 100vh; }
     #ui { position: absolute; top: 20px; left: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); pointer-events: none; }
     .hud-title { font-size: 24px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px; color: #ff3366; }
     .hud-stat { font-size: 16px; margin: 3px 0; }
     
     #health-bar-container {
-      width: 180px; height: 12px; background: rgba(255,255,255,0.2);
-      border-radius: 6px; overflow: hidden; margin-top: 5px; border: 1px solid #555;
+      width: 180px; height: 12px; background: rgba(0,0,0,0.4);
+      border-radius: 6px; overflow: hidden; margin-top: 5px; border: 1px solid #fff;
     }
-    #health-bar { width: 100%; height: 100%; background: #00b894; transition: width 0.2s, background-color 0.2s; }
+    #health-bar { width: 100%; height: 100%; background: #00b894; }
 
     #controls-hint {
-      position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.8);
+      position: absolute; bottom: 20px; left: 20px; color: #fff;
       font-size: 13px; background: rgba(0,0,0,0.6); padding: 10px 15px; border-radius: 8px; pointer-events: none;
     }
 
@@ -55,7 +55,7 @@
     <div class="hud-stat" id="credits-hud">Credits: $500</div>
     <div class="hud-stat" id="track-hud" style="color: #74b9ff;">Track: Squeak Squeak Touge 🐭</div>
     <div class="hud-stat" id="car-hud" style="color: #fd79a8;">Car: Aero Sil-80 (Active Wing Spec)</div>
-    <div class="hud-stat" id="mp-status" style="color: #a29bfe;">MP: Offline</div>
+    <div class="hud-stat" id="mp-status" style="color: #a29bfe;">NPC Tandem Partner: ACTIVE</div>
     <div class="hud-stat" style="margin-top: 6px;">Car Durability:</div>
     <div id="health-bar-container"><div id="health-bar"></div></div>
   </div>
@@ -65,7 +65,6 @@
   <button class="top-btn" id="garage-btn" onclick="toggleModal('garage-modal')">GARAGE</button>
   <button class="top-btn" id="account-btn" onclick="toggleModal('account-modal')">LOGIN / REGISTER</button>
 
-  <!-- Track Selection Modal -->
   <div class="modal" id="track-modal">
     <button class="close-btn" onclick="toggleModal('track-modal')">✕</button>
     <div class="modal-title">Select Drift Track</div>
@@ -90,27 +89,71 @@
   <script>
     // --- 3D Scene Setup ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x1a1a24, 0.0015);
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.FogExp2(0xcce0ff, 0.001);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const sun = new THREE.DirectionalLight(0xffe2a3, 1.2);
-    sun.position.set(100, 200, 100);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const sun = new THREE.DirectionalLight(0xfff5ea, 1.2);
+    sun.position.set(200, 300, 100);
+    sun.castShadow = true;
     scene.add(sun);
 
-    // --- Active Aero Wing Car Builder ---
-    let activeWingMesh = null;
+    // Grass Base Ground
+    const grassGeo = new THREE.PlaneGeometry(2500, 2500);
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x557a2b, roughness: 0.9 });
+    const grassFloor = new THREE.Mesh(grassGeo, grassMat);
+    grassFloor.rotation.x = -Math.PI / 2;
+    grassFloor.position.y = -0.1;
+    scene.add(grassFloor);
 
-    function buildLowPolyAeroCar(colorHex = 0xd63031) {
+    // --- Smoke Particle System ---
+    const particles = [];
+    const smokeGeo = new THREE.SphereGeometry(0.3, 6, 6);
+    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xeeeeee, transparent: true, opacity: 0.6 });
+
+    function createSmokeParticle(pos) {
+      const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
+      p.position.copy(pos);
+      p.position.y = 0.2;
+      p.scale.set(1, 1, 1);
+      scene.add(p);
+      particles.push({ mesh: p, life: 1.0 });
+    }
+
+    function updateSmoke(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt * 1.5;
+        p.mesh.scale.addScalar(dt * 3.5);
+        p.mesh.material.opacity = p.life * 0.5;
+        p.mesh.position.y += dt * 0.8;
+
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    // --- Active Aero Car & Wheel Rig Builder ---
+    let activeWingMesh = null;
+    let wheelsList = [];
+
+    function buildLowPolyAeroCar(colorHex = 0xd63031, isNPC = false) {
       const car = new THREE.Group();
+      const localWheels = [];
+
       const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, flatShading: true, roughness: 0.3 });
       const darkMat = new THREE.MeshStandardMaterial({ color: 0x111116, flatShading: true });
       const glassMat = new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.1 });
       const carbonMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.2 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, flatShading: true });
 
       // Body Frame
       const bodyGeo = new THREE.CylinderGeometry(0.9, 1.15, 4.2, 6);
@@ -128,20 +171,35 @@
       cabin.scale.set(0.9, 0.5, 1);
       car.add(cabin);
 
-      // Wheels
-      const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.3, 8);
-      wheelGeo.rotateZ(Math.PI / 2);
+      // Wheel setup with rims
       const wheelPositions = [
         [0.95, 0.38, 1.2], [-0.95, 0.38, 1.2],
         [0.95, 0.38, -1.3], [-0.95, 0.38, -1.3]
       ];
+
       wheelPositions.forEach(pos => {
-        const wheel = new THREE.Mesh(wheelGeo, darkMat);
-        wheel.position.set(...pos);
-        car.add(wheel);
+        const wheelPivot = new THREE.Group();
+        wheelPivot.position.set(...pos);
+
+        const tireGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.3, 12);
+        tireGeo.rotateZ(Math.PI / 2);
+        const tire = new THREE.Mesh(tireGeo, darkMat);
+
+        const spokeGeo = new THREE.BoxGeometry(0.65, 0.1, 0.32);
+        const spoke1 = new THREE.Mesh(spokeGeo, rimMat);
+        const spoke2 = new THREE.Mesh(spokeGeo, rimMat);
+        spoke2.rotation.x = Math.PI / 2;
+
+        wheelPivot.add(tire, spoke1, spoke2);
+        localWheels.push(wheelPivot);
+        car.add(wheelPivot);
       });
 
-      // ACTIVE AERO WING ASSEMBLY
+      if (!isNPC) {
+        wheelsList = localWheels;
+      }
+
+      // Active Aero Wing
       const wingGroup = new THREE.Group();
       wingGroup.position.set(0, 1.1, -1.8);
 
@@ -153,15 +211,19 @@
       wingGroup.add(leftStand, rightStand);
 
       const bladeGeo = new THREE.BoxGeometry(2.2, 0.05, 0.4);
-      activeWingMesh = new THREE.Mesh(bladeGeo, carbonMat);
-      activeWingMesh.position.set(0, 0.4, 0);
-      wingGroup.add(activeWingMesh);
+      const wingBlade = new THREE.Mesh(bladeGeo, carbonMat);
+      wingBlade.position.set(0, 0.4, 0);
+      wingGroup.add(wingBlade);
+
+      if (!isNPC) {
+        activeWingMesh = wingBlade;
+      }
 
       car.add(wingGroup);
       return car;
     }
 
-    // --- Track Ribbon Mesh Generator ---
+    // --- Track Ribbon Generator ---
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
 
@@ -192,7 +254,7 @@
       geometry.setIndex(indices);
       geometry.computeVertexNormals();
 
-      const material = new THREE.MeshStandardMaterial({ color: 0x2d3436, side: THREE.DoubleSide, roughness: 0.8 });
+      const material = new THREE.MeshStandardMaterial({ color: 0x333338, side: THREE.DoubleSide, roughness: 0.8 });
       return new THREE.Mesh(geometry, material);
     }
 
@@ -200,8 +262,8 @@
       const curvePoints = [];
       for (let i = 0; i < 120; i++) {
         const angle = (i / 120) * Math.PI * 2;
-        const x = Math.sin(angle * 3) * 180 + Math.cos(angle) * 80;
-        const z = Math.cos(angle * 2) * 220 + Math.sin(angle * 2) * 40;
+        const x = Math.sin(angle * 3) * 220 + Math.cos(angle) * 100;
+        const z = Math.cos(angle * 2) * 260 + Math.sin(angle * 2) * 50;
         const y = 0.2;
         curvePoints.push(new THREE.Vector3(x, y, z));
       }
@@ -220,22 +282,15 @@
     }
 
     function buildHiroshimaTouge() {
-      const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(800, 800),
-        new THREE.MeshStandardMaterial({ color: 0x1e272c, roughness: 0.9 })
-      );
-      ground.rotation.x = -Math.PI / 2;
-      trackGroup.add(ground);
-
       const roadPoints = [];
       for (let i = 0; i <= 100; i++) {
         const t = i / 100;
-        const x = Math.sin(t * Math.PI * 8) * 70;
-        const z = (t * 600) - 300;
-        const y = (1 - t) * 25;
+        const x = Math.sin(t * Math.PI * 8) * 80;
+        const z = (t * 700) - 350;
+        const y = (1 - t) * 35;
         roadPoints.push(new THREE.Vector3(x, y, z));
       }
-      const roadMesh = createRibbonTrack(roadPoints, 20);
+      const roadMesh = createRibbonTrack(roadPoints, 22);
       trackGroup.add(roadMesh);
       return roadPoints[0];
     }
@@ -243,7 +298,14 @@
     let carPos = new THREE.Vector3(0, 0.8, 0);
     let velocity = new THREE.Vector3();
     let carHeading = 0;
+    let driftScore = 0;
     const clock = new THREE.Clock();
+
+    // NPC Tandem Variables
+    let npcCarGroup = buildLowPolyAeroCar(0x0984e3, true);
+    scene.add(npcCarGroup);
+    let npcPos = new THREE.Vector3(-6, 0.8, -10);
+    let npcHeading = 0;
 
     function selectTrack(trackType) {
       while (trackGroup.children.length > 0) { trackGroup.remove(trackGroup.children[0]); }
@@ -252,24 +314,30 @@
         const startPos = buildSqueakSqueakTouge();
         document.getElementById('track-hud').innerText = "Track: Squeak Squeak Touge 🐭";
         carPos.copy(startPos).add(new THREE.Vector3(0, 0.8, 0));
+        npcPos.copy(startPos).add(new THREE.Vector3(-5, 0.8, -12));
         carHeading = 0;
+        npcHeading = 0;
       } else if (trackType === 'arena') {
         buildDriftArena();
         document.getElementById('track-hud').innerText = "Track: Ebisu Drift Arena 🏎️";
         carPos.set(0, 0.8, 0);
+        npcPos.set(-5, 0.8, -12);
         carHeading = 0;
+        npcHeading = 0;
       } else if (trackType === 'touge') {
         const startPos = buildHiroshimaTouge();
         document.getElementById('track-hud').innerText = "Track: Hiroshima Mountain Pass ⛰️";
         carPos.copy(startPos).add(new THREE.Vector3(0, 0.8, 0));
+        npcPos.copy(startPos).add(new THREE.Vector3(-5, 0.8, -12));
         carHeading = 0;
+        npcHeading = 0;
       }
 
       velocity.set(0, 0, 0);
       toggleModal('track-modal');
     }
 
-    let carGroup = buildLowPolyAeroCar(0xd63031);
+    let carGroup = buildLowPolyAeroCar(0xd63031, false);
     scene.add(carGroup);
     selectTrack('squeak');
 
@@ -307,12 +375,58 @@
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
+      const currentSpeed = velocity.length();
+
+      // NPC Tandem Chase Physics
+      const targetNPCPos = carPos.clone().sub(forwardDir.clone().multiplyScalar(4.5)).add(new THREE.Vector3(2.5, 0, 0));
+      npcPos.lerp(targetNPCPos, 2.5 * dt);
+      
+      const targetNPCHeading = Math.atan2(carPos.x - npcPos.x, carPos.z - npcPos.z);
+      npcHeading = THREE.MathUtils.lerp(npcHeading, carHeading, 4.0 * dt);
+      
+      npcCarGroup.position.copy(npcPos);
+      npcCarGroup.rotation.y = npcHeading + (Math.sin(clock.getElapsedTime() * 5) * 0.15); // Adds drift angle bias to NPC
+
+      // DRIFT & SMOKE LOGIC
+      const isDrifting = (keys.handbrake && currentSpeed > 3) || (Math.abs(turnInput) > 0 && currentSpeed > 10);
+      if (isDrifting) {
+        wheelsList.slice(2).forEach(w => {
+          const worldPos = new THREE.Vector3();
+          w.getWorldPosition(worldPos);
+          createSmokeParticle(worldPos);
+        });
+        driftScore += Math.round(currentSpeed * 2);
+        document.getElementById('drift-score').innerText = `Drift Points: ${driftScore}`;
+      }
+
+      // NPC Smoke during chase
+      if (currentSpeed > 5) {
+        const npcSmokePos = npcPos.clone().add(new THREE.Vector3(0, 0.2, 0));
+        createSmokeParticle(npcSmokePos);
+      }
+
+      updateSmoke(dt);
+
+      // Wheel Spin & Steering
+      wheelsList.forEach((w, index) => {
+        w.children[0].rotation.x += currentSpeed * dt * 3;
+        w.children[1].rotation.x += currentSpeed * dt * 3;
+        w.children[2].rotation.x += currentSpeed * dt * 3;
+
+        if (index < 2) {
+          w.rotation.y = turnInput * 0.45;
+        }
+      });
+
       // Active Aero Wing Animation
       if (activeWingMesh) {
         const isBraking = keys.backward || keys.handbrake;
         const targetRotation = isBraking ? -Math.PI / 4 : 0;
         activeWingMesh.rotation.x = THREE.MathUtils.lerp(activeWingMesh.rotation.x, targetRotation, 0.2);
       }
+
+      // Speedometer
+      document.getElementById('speedometer').innerText = `Speed: ${Math.round(currentSpeed * 3.6)} km/h`;
 
       const camOffset = new THREE.Vector3(0, 4.8, -11).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
       camera.position.lerp(carPos.clone().add(camOffset), 0.12);
