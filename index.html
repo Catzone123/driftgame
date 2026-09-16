@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Drift Simulator - Multi-Track Edition</title>
+  <title>3D Drift Simulator - FR Legends Edition</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
     #canvas-container { width: 100vw; height: 100vh; }
@@ -26,7 +26,7 @@
     /* Modal Overlay Styling */
     .modal {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 420px; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px;
+      width: 440px; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px;
       box-shadow: 0 0 20px rgba(0,0,0,0.8); border: 1px solid #333; z-index: 100;
     }
     .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 8px; }
@@ -42,13 +42,13 @@
   <div id="canvas-container"></div>
   
   <div id="ui">
-    <div class="hud-title">DRIFT SIMULATOR</div>
+    <div class="hud-title">DRIFT SIMULATOR: FR LEGENDS</div>
     <div class="hud-stat" id="speedometer">Speed: 0 km/h</div>
     <div class="hud-stat" id="drift-score">Drift Points: 0</div>
     <div class="hud-stat" id="credits-hud">Credits: $0</div>
-    <div class="hud-stat" id="track-hud" style="color: #74b9ff;">Track: Oval Speedway</div>
+    <div class="hud-stat" id="track-hud" style="color: #74b9ff;">Track: Touge Mountain Pass</div>
+    <div class="hud-stat" id="car-hud" style="color: #fd79a8;">Car: S13 Drift Spec</div>
     <div class="hud-stat" id="time-hud" style="color: #f1c40f;">Time: Day</div>
-    <div class="hud-stat" id="event-hud" style="color: #00cec9;">Event: Normal Mode</div>
   </div>
 
   <button class="top-btn" id="track-btn" onclick="toggleModal('track-modal')">SELECT TRACK</button>
@@ -59,58 +59,69 @@
     <button class="close-btn" onclick="toggleModal('track-modal')">✕</button>
     <div class="modal-title">Select Drift Track</div>
     <div class="shop-item">
-      <span>1. Oval Speedway (Beginner)</span>
-      <button class="btn-buy" onclick="selectTrack('oval')">Select</button>
+      <span>1. Touge Mountain Pass (Alpine Cliffside)</span>
+      <button class="btn-buy" onclick="selectTrack('alpine')">Select</button>
     </div>
     <div class="shop-item">
-      <span>2. Figure-8 Circuit (Technical)</span>
+      <span>2. Ebisu-Style Circuit (Hairpins & Barriers)</span>
       <button class="btn-buy" onclick="selectTrack('figure8')">Select</button>
     </div>
     <div class="shop-item">
-      <span>3. Alpine Pass (3D Endless Circuit)</span>
-      <button class="btn-buy" onclick="selectTrack('alpine')">Select</button>
+      <span>3. High-Speed Oval Arena</span>
+      <button class="btn-buy" onclick="selectTrack('oval')">Select</button>
     </div>
   </div>
 
   <!-- Garage Modal -->
   <div class="modal" id="garage-modal">
     <button class="close-btn" onclick="toggleModal('garage-modal')">✕</button>
-    <div class="modal-title">Performance Tuning & Dealership</div>
+    <div class="modal-title">Dealership, Aero & Tuning</div>
     
+    <!-- Car Selection -->
     <div class="shop-item">
-      <span>Engine Upgrade (+Power)</span>
-      <button class="btn-buy" id="buy-engine" onclick="upgradeStat('engine')">Buy ($200)</button>
+      <span>S13 Drift Spec (Balanced)</span>
+      <button class="btn-buy" onclick="selectCarModel('s13')">Equip</button>
     </div>
     <div class="shop-item">
-      <span>Steering Angle (+Drift Angle)</span>
-      <button class="btn-buy" id="buy-steer" onclick="upgradeStat('steer')">Buy ($150)</button>
+      <span>AE86 Coupe (Agile / Lightweight)</span>
+      <button class="btn-buy" id="buy-ae86" onclick="buyCar('ae86', 500)">Buy ($500)</button>
     </div>
     <div class="shop-item">
-      <span>Slick Tires (Extreme Drift)</span>
-      <button class="btn-buy" id="buy-tires" onclick="upgradeStat('tires')">Buy ($250)</button>
+      <span>JZA80 GT Monster (High Power)</span>
+      <button class="btn-buy" id="buy-supra" onclick="buyCar('supra', 1200)">Buy ($1200)</button>
     </div>
     <hr style="border-color:#333;">
+    <!-- Active Aero & Mods -->
     <div class="shop-item">
-      <span>Pro Drift Car (GT Spec)</span>
-      <button class="btn-buy" id="buy-car" onclick="buyCar()">Buy ($1000)</button>
+      <span>Active GT Wing (Auto-Pitch Braking)</span>
+      <button class="btn-buy" id="buy-aero" onclick="buyAero()">Buy ($300)</button>
+    </div>
+    <div class="shop-item">
+      <span>Engine Tuning (+Horsepower)</span>
+      <button class="btn-buy" onclick="upgradeStat('engine')">Buy ($200)</button>
+    </div>
+    <div class="shop-item">
+      <span>Slick Drift Tires (Angle Multiplier)</span>
+      <button class="btn-buy" onclick="upgradeStat('tires')">Buy ($250)</button>
     </div>
   </div>
 
   <div id="controls-hint">
-    <b>Controls:</b> W/Up = Gas | S/Down = Brake/Taillights | A/D = Steer | Space = Handbrake (Drift)<br>
-    <b>Toggles:</b> H = Headlights | C = Christmas Event | ESC = Close Menus
+    <b>Controls:</b> W/Up = Gas | S/Down = Brake (Active Aero Airbrake) | A/D = Steer | Space = Handbrake<br>
+    <b>Toggles:</b> H = Headlights | ESC = Close Menus
   </div>
 
   <script>
-    // --- Stats & Upgrades ---
-    let playerCredits = 0;
-    let enginePower = 35;
-    let steeringSensitivity = 2.8;
-    let tireGrip = 0.88;
-    let ownedCarType = 'Standard';
-    let currentTrackType = 'oval';
+    // --- Stats & Garage ---
+    let playerCredits = 500;
+    let enginePower = 40;
+    let steeringSensitivity = 3.2;
+    let tireGrip = 0.85;
+    let hasActiveAero = false;
+    let ownedCars = { s13: true, ae86: false, supra: false };
+    let currentCar = 's13';
 
-    // --- Scene Setup ---
+    // --- Scene & Camera ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x70a1ff, 0.002);
 
@@ -121,7 +132,7 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- Lighting Setup ---
+    // --- Lighting ---
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
@@ -132,58 +143,93 @@
     sunLight.shadow.mapSize.height = 2048;
     scene.add(sunLight);
 
-    // Start in full daylight (Math.PI / 2)
     let dayNightTime = Math.PI / 2;
 
-    // --- Ground & Track Management ---
+    // --- Track Construction ---
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
 
-    const groundGeo = new THREE.PlaneGeometry(1200, 1200);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x111811, roughness: 0.9 });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.5;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.5, metalness: 0.1, side: THREE.DoubleSide });
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a3b3c, roughness: 0.9 });
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x1e381e, roughness: 0.9 });
 
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.4, metalness: 0.1, side: THREE.DoubleSide });
-
-    function buildOvalTrack() {
-      const trackShape = new THREE.Shape();
-      trackShape.absarc(0, 0, 140, 0, Math.PI * 2, false);
-      const holePath = new THREE.Path();
-      holePath.absarc(0, 0, 100, 0, Math.PI * 2, true);
-      trackShape.holes.push(holePath);
-
-      const trackMesh = new THREE.Mesh(new THREE.ShapeGeometry(trackShape, 64), trackMat);
-      trackMesh.rotation.x = -Math.PI / 2;
-      trackMesh.position.y = 0.02;
-      trackMesh.receiveShadow = true;
-      trackGroup.add(trackMesh);
-
-      for (let i = 0; i < 64; i++) {
-        const angle = (i / 64) * Math.PI * 2;
-        const barrier = new THREE.Mesh(
-          new THREE.BoxGeometry(2, 2, 8),
-          new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xee5253 : 0xffffff })
-        );
-        barrier.position.set(Math.cos(angle) * 142, 1, Math.sin(angle) * 142);
-        barrier.rotation.y = -angle;
-        barrier.castShadow = true;
-        trackGroup.add(barrier);
+    function buildAlpinePassTrack() {
+      const curvePoints = [];
+      const numPoints = 140;
+      
+      for (let i = 0; i <= numPoints; i++) {
+        const t = i / numPoints;
+        const angle = t * Math.PI * 2;
+        
+        // Touge style sharp twists and elevation drops
+        const x = Math.sin(angle) * 220 + Math.sin(angle * 4) * 70;
+        const z = Math.cos(angle) * 300 + Math.cos(angle * 3) * 90;
+        const y = Math.sin(angle * 3) * 45 + Math.cos(angle * 2) * 25;
+        
+        curvePoints.push(new THREE.Vector3(x, y, z));
       }
+
+      const curve = new THREE.CatmullRomCurve3(curvePoints, true);
+      const trackWidth = 22;
+      const segments = 600;
+
+      const trackGeo = new THREE.BufferGeometry();
+      const pos = [], normals = [], uvs = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const u = i / segments;
+        const pt = curve.getPointAt(u);
+        const tan = curve.getTangentAt(u);
+        const up = new THREE.Vector3(0, 1, 0);
+        const right = new THREE.Vector3().crossVectors(tan, up).normalize();
+        
+        // Hairpin banking
+        const bankAngle = Math.sin(u * Math.PI * 12) * 0.35;
+        right.applyAxisAngle(tan, bankAngle);
+
+        const p1 = pt.clone().addScaledVector(right, -trackWidth / 2);
+        const p2 = pt.clone().addScaledVector(right, trackWidth / 2);
+
+        pos.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+
+        // FR Legends Cliff Wall mesh generation
+        if (i % 3 === 0) {
+          const wallHeight = 12 + Math.random() * 8;
+          const wallGeo = new THREE.BoxGeometry(4, wallHeight, 10);
+          const cliff = new THREE.Mesh(wallGeo, rockMat);
+          const wallSide = (i % 2 === 0) ? -1 : 1;
+          const cliffPos = pt.clone().addScaledVector(right, (trackWidth / 2 + 6) * wallSide);
+          cliff.position.set(cliffPos.x, cliffPos.y + wallHeight / 2, cliffPos.z);
+          cliff.rotation.y = Math.atan2(tan.x, tan.z);
+          trackGroup.add(cliff);
+        }
+      }
+
+      const indices = [];
+      for (let i = 0; i < segments; i++) {
+        const b = i * 2;
+        indices.push(b, b + 1, b + 2, b + 1, b + 3, b + 2);
+      }
+
+      trackGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      trackGeo.setIndex(indices);
+      trackGeo.computeVertexNormals();
+
+      const roadMesh = new THREE.Mesh(trackGeo, trackMat);
+      roadMesh.receiveShadow = true;
+      roadMesh.castShadow = true;
+      trackGroup.add(roadMesh);
     }
 
-    function buildFigure8Track() {
+    function buildEbisuTrack() {
       const shape1 = new THREE.Shape();
-      shape1.absarc(-90, 0, 95, 0, Math.PI * 2, false);
-      const hole1 = new THREE.Path(); hole1.absarc(-90, 0, 60, 0, Math.PI * 2, true);
+      shape1.absarc(-100, 0, 110, 0, Math.PI * 2, false);
+      const hole1 = new THREE.Path(); hole1.absarc(-100, 0, 75, 0, Math.PI * 2, true);
       shape1.holes.push(hole1);
 
       const shape2 = new THREE.Shape();
-      shape2.absarc(90, 0, 95, 0, Math.PI * 2, false);
-      const hole2 = new THREE.Path(); hole2.absarc(90, 0, 60, 0, Math.PI * 2, true);
+      shape2.absarc(100, 0, 110, 0, Math.PI * 2, false);
+      const hole2 = new THREE.Path(); hole2.absarc(100, 0, 75, 0, Math.PI * 2, true);
       shape2.holes.push(hole2);
 
       const m1 = new THREE.Mesh(new THREE.ShapeGeometry(shape1, 64), trackMat);
@@ -194,197 +240,169 @@
       trackGroup.add(m2);
     }
 
-    function buildAlpineTrack() {
-      const curvePoints = [];
-      const numPoints = 120;
-      
-      for (let i = 0; i <= numPoints; i++) {
-        const t = i / numPoints;
-        const angle = t * Math.PI * 2;
-        
-        const x = Math.sin(angle) * (180 + Math.sin(angle * 3) * 60);
-        const z = Math.cos(angle) * (280 + Math.cos(angle * 2) * 80);
-        const y = Math.sin(angle * 4) * 30 + Math.cos(angle * 2) * 15;
-        
-        curvePoints.push(new THREE.Vector3(x, y, z));
-      }
+    function buildOvalTrack() {
+      const shape = new THREE.Shape();
+      shape.absarc(0, 0, 150, 0, Math.PI * 2, false);
+      const hole = new THREE.Path(); hole.absarc(0, 0, 110, 0, Math.PI * 2, true);
+      shape.holes.push(hole);
 
-      const curve = new THREE.CatmullRomCurve3(curvePoints, true); // Closed loop curve
-      
-      const trackWidth = 24;
-      const segments = 500;
-      const geometry = new THREE.BufferGeometry();
-      const positions = [];
-
-      for (let i = 0; i <= segments; i++) {
-        const u = i / segments;
-        const point = curve.getPointAt(u);
-        const tangent = curve.getTangentAt(u);
-        
-        const up = new THREE.Vector3(0, 1, 0);
-        const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
-        
-        const bankAngle = Math.sin(u * Math.PI * 8) * 0.2; 
-        right.applyAxisAngle(tangent, bankAngle);
-
-        const leftEdge = point.clone().addScaledVector(right, -trackWidth / 2);
-        const rightEdge = point.clone().addScaledVector(right, trackWidth / 2);
-
-        positions.push(leftEdge.x, leftEdge.y, leftEdge.z);
-        positions.push(rightEdge.x, rightEdge.y, rightEdge.z);
-      }
-
-      const indices = [];
-      for (let i = 0; i < segments; i++) {
-        const base = i * 2;
-        indices.push(base, base + 1, base + 2);
-        indices.push(base + 1, base + 3, base + 2);
-      }
-
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      geometry.setIndex(indices);
-      geometry.computeVertexNormals();
-
-      const trackMesh = new THREE.Mesh(geometry, trackMat);
-      trackMesh.receiveShadow = true;
-      trackMesh.castShadow = true;
-      trackGroup.add(trackMesh);
+      const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape, 64), trackMat);
+      mesh.rotation.x = -Math.PI / 2; mesh.position.y = 0.02; mesh.receiveShadow = true;
+      trackGroup.add(mesh);
     }
 
     function selectTrack(type) {
-      currentTrackType = type;
-      while (trackGroup.children.length > 0) {
-        trackGroup.remove(trackGroup.children[0]);
-      }
+      while (trackGroup.children.length > 0) trackGroup.remove(trackGroup.children[0]);
 
-      if (type === 'oval') {
-        buildOvalTrack();
-        carPos.set(120, 0, 0);
-        document.getElementById('track-hud').innerText = 'Track: Oval Speedway';
+      if (type === 'alpine') {
+        buildAlpinePassTrack();
+        carPos.set(0, 20, -360);
+        document.getElementById('track-hud').innerText = 'Track: Touge Mountain Pass';
       } else if (type === 'figure8') {
-        buildFigure8Track();
-        carPos.set(-90, 0, 75);
-        document.getElementById('track-hud').innerText = 'Track: Figure-8 Circuit';
-      } else if (type === 'alpine') {
-        buildAlpineTrack();
-        carPos.set(0, 15, -360);
-        document.getElementById('track-hud').innerText = 'Track: Alpine Pass';
+        buildEbisuTrack();
+        carPos.set(-100, 0, 90);
+        document.getElementById('track-hud').innerText = 'Track: Ebisu Drift Circuit';
+      } else if (type === 'oval') {
+        buildOvalTrack();
+        carPos.set(130, 0, 0);
+        document.getElementById('track-hud').innerText = 'Track: Speed Oval Arena';
       }
 
       velocity.set(0, 0, 0);
       carHeading = 0;
       toggleModal('track-modal');
     }
-    buildOvalTrack();
 
-    // --- Snowfall System ---
-    let isChristmas = false;
-    const snowCount = 1200;
-    const snowGeo = new THREE.BufferGeometry();
-    const snowPos = new Float32Array(snowCount * 3);
+    // Ground Plane
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), grassMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.5;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-    for (let i = 0; i < snowCount * 3; i += 3) {
-      snowPos[i] = (Math.random() - 0.5) * 600;
-      snowPos[i + 1] = Math.random() * 100;
-      snowPos[i + 2] = (Math.random() - 0.5) * 600;
-    }
-    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
-    const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0 });
-    const snowParticles = new THREE.Points(snowGeo, snowMat);
-    scene.add(snowParticles);
-
-    // --- Vehicle ---
+    // --- Dynamic Car Models & Active Aero ---
     const carGroup = new THREE.Group();
-    carGroup.position.set(120, 0, 0);
     scene.add(carGroup);
 
-    const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0xd63031, metalness: 0.6, roughness: 0.2, clearcoat: 1.0 });
-    const carBody = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 4.2), bodyMat);
-    carBody.position.y = 0.6;
-    carBody.castShadow = true;
-    carGroup.add(carBody);
+    let spoilerFlap = null;
+    let brakeLEDs = [];
+    let headlights = [];
 
-    const cabin = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 0.55, 2),
-      new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.1, transmission: 0.7, transparent: true })
-    );
-    cabin.position.set(0, 1.15, -0.2);
-    carGroup.add(cabin);
+    function buildCarModel(modelType) {
+      while (carGroup.children.length > 0) carGroup.remove(carGroup.children[0]);
+      brakeLEDs = []; headlights = []; spoilerFlap = null;
 
-    // Headlights
-    const headlightL = new THREE.SpotLight(0xfffaed, 0, 120, Math.PI / 5, 0.3);
-    headlightL.position.set(-0.7, 0.6, 2.1);
-    headlightL.target.position.set(-0.7, 0, 20);
-    carGroup.add(headlightL);
-    carGroup.add(headlightL.target);
+      let bodyColor = 0xd63031;
+      if (modelType === 'ae86') bodyColor = 0xffffff;
+      if (modelType === 'supra') bodyColor = 0x0984e3;
 
-    const headlightR = headlightL.clone();
-    headlightR.position.x = 0.7;
-    headlightR.target.position.set(0.7, 0, 20);
-    carGroup.add(headlightR);
-    carGroup.add(headlightR.target);
+      const bodyMat = new THREE.MeshPhysicalMaterial({ color: bodyColor, metalness: 0.5, roughness: 0.2, clearcoat: 1.0 });
 
-    let headlightsOn = false;
+      // Chassis Body
+      const carBody = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.65, 4.2), bodyMat);
+      carBody.position.y = 0.6;
+      carBody.castShadow = true;
+      carGroup.add(carBody);
 
-    // Taillights
-    const tailLightGeo = new THREE.BoxGeometry(0.5, 0.2, 0.1);
-    const tailLightMatL = new THREE.MeshBasicMaterial({ color: 0x660000 });
-    const tailLightMatR = new THREE.MeshBasicMaterial({ color: 0x660000 });
+      // Cabin / Roof
+      const cabinGeo = modelType === 'ae86' ? new THREE.BoxGeometry(1.7, 0.6, 2.2) : new THREE.BoxGeometry(1.6, 0.55, 1.9);
+      const cabin = new THREE.Mesh(cabinGeo, new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.1, transmission: 0.8, transparent: true }));
+      cabin.position.set(0, 1.15, -0.2);
+      carGroup.add(cabin);
 
-    const tailLightL = new THREE.Mesh(tailLightGeo, tailLightMatL);
-    tailLightL.position.set(-0.7, 0.65, -2.1);
-    carGroup.add(tailLightL);
+      // Realistic Rear LED Brake Light Bar
+      const tailLightGroup = new THREE.Group();
+      const redLEDMat = new THREE.MeshBasicMaterial({ color: 0x330000 });
+      const ledBarGeo = new THREE.BoxGeometry(0.8, 0.12, 0.1);
 
-    const tailLightR = new THREE.Mesh(tailLightGeo, tailLightMatR);
-    tailLightR.position.set(0.7, 0.65, -2.1);
-    carGroup.add(tailLightR);
+      const tailL = new THREE.Mesh(ledBarGeo, redLEDMat);
+      tailL.position.set(-0.6, 0.65, -2.11);
+      const tailR = new THREE.Mesh(ledBarGeo, redLEDMat);
+      tailR.position.set(0.6, 0.65, -2.11);
 
-    // 3D Wheels
-    const wheels = [];
-    const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.35, 24);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-    const rimGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.36, 12);
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+      // PointLight glow for braking
+      const brakeGlow = new THREE.PointLight(0xff0000, 0, 8);
+      brakeGlow.position.set(0, 0.65, -2.2);
 
-    const wheelOffsets = [
-      { x: -1.05, y: 0.4, z: 1.3, isFront: true },
-      { x: 1.05, y: 0.4, z: 1.3, isFront: true },
-      { x: -1.05, y: 0.4, z: -1.3, isFront: false },
-      { x: 1.05, y: 0.4, z: -1.3, isFront: false }
-    ];
+      carGroup.add(tailL); carGroup.add(tailR); carGroup.add(brakeGlow);
+      brakeLEDs.push(tailL, tailR, brakeGlow);
 
-    wheelOffsets.forEach(pos => {
-      const wheelPivot = new THREE.Group();
-      wheelPivot.position.set(pos.x, pos.y, pos.z);
+      // Headlights
+      const headL = new THREE.SpotLight(0xfffaed, 0, 120, Math.PI / 5, 0.3);
+      headL.position.set(-0.7, 0.6, 2.1); headL.target.position.set(-0.7, 0, 20);
+      const headR = headL.clone();
+      headR.position.x = 0.7; headR.target.position.set(0.7, 0, 20);
+      carGroup.add(headL); carGroup.add(headL.target);
+      carGroup.add(headR); carGroup.add(headR.target);
+      headlights.push(headL, headR);
 
-      const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
-      wheelMesh.rotation.z = Math.PI / 2;
-      wheelMesh.castShadow = true;
+      // Optional Active Aero Spoiler Wing
+      if (hasActiveAero) {
+        const spoilerGroup = new THREE.Group();
+        spoilerGroup.position.set(0, 1.0, -1.8);
 
-      const rimMesh = new THREE.Mesh(rimGeo, rimMat);
-      rimMesh.rotation.z = Math.PI / 2;
+        const mountMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8 });
+        const m1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.35, 0.2), mountMat); m1.position.x = -0.6;
+        const m2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.35, 0.2), mountMat); m2.position.x = 0.6;
+        spoilerGroup.add(m1); spoilerGroup.add(m2);
 
-      wheelPivot.add(wheelMesh);
-      wheelPivot.add(rimMesh);
-      carGroup.add(wheelPivot);
+        spoilerFlap = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 0.45), bodyMat);
+        spoilerFlap.position.y = 0.2;
+        spoilerGroup.add(spoilerFlap);
 
-      wheels.push({ pivot: wheelPivot, mesh: wheelMesh, rim: rimMesh, isFront: pos.isFront });
-    });
+        carGroup.add(spoilerGroup);
+      }
 
-    // Smoke System
-    const smokeParticles = [];
-    const smokeGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xeeeeee, transparent: true, opacity: 0.5 });
-
-    function createSmoke(x, y, z) {
-      const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
-      p.position.set(x + (Math.random() - 0.5) * 0.5, y + 0.2, z + (Math.random() - 0.5) * 0.5);
-      scene.add(p);
-      smokeParticles.push({ mesh: p, life: 1.0 });
+      // Wheels
+      const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.35, 24);
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+      [
+        { x: -1.05, z: 1.3 }, { x: 1.05, z: 1.3 },
+        { x: -1.05, z: -1.3 }, { x: 1.05, z: -1.3 }
+      ].forEach(pos => {
+        const w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.rotation.z = Math.PI / 2;
+        w.position.set(pos.x, 0.4, pos.z);
+        carGroup.add(w);
+      });
     }
 
-    // --- Inputs ---
+    function selectCarModel(model) {
+      currentCar = model;
+      if (model === 's13') { enginePower = 40; steeringSensitivity = 3.2; }
+      if (model === 'ae86') { enginePower = 34; steeringSensitivity = 4.2; }
+      if (model === 'supra') { enginePower = 65; steeringSensitivity = 2.9; }
+      buildCarModel(model);
+      document.getElementById('car-hud').innerText = `Car: ${model.toUpperCase()} Spec`;
+    }
+
+    function buyCar(model, price) {
+      if (playerCredits >= price && !ownedCars[model]) {
+        playerCredits -= price;
+        ownedCars[model] = true;
+        const btn = document.getElementById(`buy-${model}`);
+        btn.innerText = 'Equip';
+        btn.onclick = () => selectCarModel(model);
+        selectCarModel(model);
+      }
+    }
+
+    function buyAero() {
+      if (playerCredits >= 300 && !hasActiveAero) {
+        playerCredits -= 300;
+        hasActiveAero = true;
+        document.getElementById('buy-aero').innerText = 'Installed';
+        document.getElementById('buy-aero').disabled = true;
+        buildCarModel(currentCar);
+      }
+    }
+
+    buildAlpinePassTrack();
+    buildCarModel('s13');
+
+    // --- Inputs & Controls ---
     const keys = { forward: false, backward: false, left: false, right: false, handbrake: false };
+    let headlightsOn = false;
 
     window.addEventListener('keydown', (e) => {
       if (['ArrowUp', 'KeyW'].includes(e.code)) keys.forward = true;
@@ -394,10 +412,8 @@
       if (e.code === 'Space') keys.handbrake = true;
       if (e.code === 'KeyH') {
         headlightsOn = !headlightsOn;
-        headlightL.intensity = headlightsOn ? 6 : 0;
-        headlightR.intensity = headlightsOn ? 6 : 0;
+        headlights.forEach(h => h.intensity = headlightsOn ? 6 : 0);
       }
-      if (e.code === 'KeyC') toggleChristmasEvent();
       if (e.code === 'Escape') {
         document.getElementById('garage-modal').style.display = 'none';
         document.getElementById('track-modal').style.display = 'none';
@@ -412,115 +428,79 @@
       if (e.code === 'Space') keys.handbrake = false;
     });
 
-    // --- Physics Variables ---
-    let carPos = new THREE.Vector3(120, 0, 0);
+    // --- Physics ---
+    let carPos = new THREE.Vector3(0, 20, -360);
     let velocity = new THREE.Vector3(0, 0, 0);
     let carHeading = 0;
     let totalDriftScore = 0;
 
-    // Boundary wrapping for infinite track driving
-    function handleEndlessTrackBounds() {
-      const boundLimit = 550;
-      if (Math.abs(carPos.x) > boundLimit) carPos.x *= -0.95;
-      if (Math.abs(carPos.z) > boundLimit) carPos.z *= -0.95;
-    }
-
-    // --- Main Loop ---
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
-      // 1. Day & Night Cycle Sync
-      dayNightTime += dt * 0.05;
+      // Day/Night Cycle
+      dayNightTime += dt * 0.03;
       const sunY = Math.sin(dayNightTime) * 150;
       sunLight.position.set(100, sunY, Math.cos(dayNightTime) * 150);
 
-      const timeHud = document.getElementById('time-hud');
-
       if (sunY > 20) {
-        // Day
         scene.background = new THREE.Color(0x70a1ff);
         scene.fog.color.setHex(0x70a1ff);
-        ambientLight.intensity = 0.7;
-        sunLight.intensity = 1.2;
-        timeHud.innerText = 'Time: Day';
-        timeHud.style.color = '#f1c40f';
-      } else if (sunY > -10) {
-        // Sunset
-        scene.background = new THREE.Color(0xe17055);
-        scene.fog.color.setHex(0xe17055);
-        ambientLight.intensity = 0.35;
-        sunLight.intensity = 0.5;
-        timeHud.innerText = 'Time: Sunset';
-        timeHud.style.color = '#e67e22';
+        ambientLight.intensity = 0.7; sunLight.intensity = 1.2;
       } else {
-        // Night
         scene.background = new THREE.Color(0x020205);
         scene.fog.color.setHex(0x020205);
-        ambientLight.intensity = 0.05;
-        sunLight.intensity = 0.0;
-        timeHud.innerText = 'Time: Night';
-        timeHud.style.color = '#9b59b6';
+        ambientLight.intensity = 0.08; sunLight.intensity = 0.0;
       }
 
-      // 2. Taillights
-      const isBraking = keys.backward;
-      tailLightMatL.color.setHex(isBraking ? 0xff0000 : 0x660000);
-      tailLightMatR.color.setHex(isBraking ? 0xff0000 : 0x660000);
-
-      // 3. Vector Physics & Steering
+      // Physics Steering
       const forwardDir = new THREE.Vector3(Math.sin(carHeading), 0, Math.cos(carHeading));
       const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
-
       const turnInput = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
       const currentSpeed = velocity.length();
 
-      if (currentSpeed > 1.0) {
-        const yawRate = turnInput * steeringSensitivity * dt * (keys.handbrake ? 1.5 : 1.0);
-        carHeading += yawRate;
+      if (currentSpeed > 0.8) {
+        carHeading += turnInput * steeringSensitivity * dt * (keys.handbrake ? 1.4 : 1.0);
       }
 
-      // 4. Wheel Animations
-      wheels.forEach(w => {
-        if (w.isFront) w.pivot.rotation.y = turnInput * 0.4;
-        w.mesh.rotation.x += currentSpeed * dt * 2.5;
-        w.rim.rotation.x += currentSpeed * dt * 2.5;
-      });
-
-      // 5. Friction & Acceleration
+      // Acceleration & Active Airbrake
       if (keys.forward) velocity.addScaledVector(forwardDir, enginePower * dt);
-      if (keys.backward) velocity.addScaledVector(forwardDir, -enginePower * 0.5 * dt);
+      if (keys.backward) {
+        velocity.addScaledVector(forwardDir, -enginePower * 0.6 * dt);
+        
+        // Active Aero Wing Airbrake Pitch
+        if (spoilerFlap) spoilerFlap.rotation.x = THREE.MathUtils.lerp(spoilerFlap.rotation.x, -Math.PI / 4, 0.2);
+        
+        // Dynamic Brake Light Illumination
+        brakeLEDs[0].material.color.setHex(0xff0000);
+        brakeLEDs[1].material.color.setHex(0xff0000);
+        brakeLEDs[2].intensity = 3.0;
+      } else {
+        if (spoilerFlap) spoilerFlap.rotation.x = THREE.MathUtils.lerp(spoilerFlap.rotation.x, 0, 0.1);
+        brakeLEDs[0].material.color.setHex(0x330000);
+        brakeLEDs[1].material.color.setHex(0x330000);
+        brakeLEDs[2].intensity = 0;
+      }
 
       const forwardVelocity = forwardDir.clone().multiplyScalar(velocity.dot(forwardDir));
       const lateralVelocity = rightDir.clone().multiplyScalar(velocity.dot(rightDir));
-
-      let currentGrip = keys.handbrake ? 0.25 : tireGrip;
-      if (isChristmas) currentGrip *= 0.7;
-
-      velocity = forwardVelocity.add(lateralVelocity.multiplyScalar(currentGrip));
+      
+      velocity = forwardVelocity.add(lateralVelocity.multiplyScalar(keys.handbrake ? 0.2 : tireGrip));
       velocity.multiplyScalar(0.985);
-
       carPos.addScaledVector(velocity, dt);
-      handleEndlessTrackBounds();
 
-      // 6. Dynamic 3D Raycasting Surface & Elevation
-      const raycaster = new THREE.Raycaster(
-        new THREE.Vector3(carPos.x, carPos.y + 50, carPos.z),
-        new THREE.Vector3(0, -1, 0)
-      );
+      // Raycasting Mountain Topography
+      const raycaster = new THREE.Raycaster(new THREE.Vector3(carPos.x, carPos.y + 50, carPos.z), new THREE.Vector3(0, -1, 0));
+      const hits = raycaster.intersectObjects(trackGroup.children, true);
 
-      const intersects = raycaster.intersectObjects(trackGroup.children, true);
-
-      if (intersects.length > 0) {
-        const hit = intersects[0];
+      if (hits.length > 0) {
+        const hit = hits[0];
         carPos.y = THREE.MathUtils.lerp(carPos.y, hit.point.y, 0.2);
-        
         const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-        const up = new THREE.Vector3(0, 1, 0);
-        const quaternion = new THREE.Quaternion().setFromUnitVectors(up, normal);
-        carGroup.quaternion.slerp(quaternion, 0.15);
+        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+        carGroup.quaternion.slerp(quat, 0.15);
       } else {
         carPos.y = THREE.MathUtils.lerp(carPos.y, 0, 0.1);
       }
@@ -528,48 +508,20 @@
       carGroup.position.copy(carPos);
       carGroup.rotation.y = carHeading;
 
-      // Body Roll
-      carBody.rotation.z = velocity.dot(rightDir) * 0.02;
-
-      // 7. Smoke & Drift
+      // Drift Calculations & HUD
       const lateralSpeed = Math.abs(velocity.dot(rightDir));
-      if (currentSpeed > 8 && lateralSpeed > 2.5) {
-        createSmoke(carPos.x - forwardDir.x * 1.5, carPos.y, carPos.z - forwardDir.z * 1.5);
-        
-        const multiplier = isChristmas ? 2 : 1;
-        const driftPoints = Math.floor(lateralSpeed * currentSpeed * 8 * dt * multiplier);
-        totalDriftScore += driftPoints;
-        playerCredits += Math.floor(driftPoints * 0.05);
-      }
-
-      // Update Smoke Particles
-      for (let i = smokeParticles.length - 1; i >= 0; i--) {
-        const p = smokeParticles[i];
-        p.life -= dt * 1.5;
-        p.mesh.scale.addScalar(dt * 1.5);
-        p.mesh.material.opacity = p.life * 0.5;
-        if (p.life <= 0) {
-          scene.remove(p.mesh);
-          smokeParticles.splice(i, 1);
-        }
-      }
-
-      // Update Snow
-      if (isChristmas) {
-        const pos = snowParticles.geometry.attributes.position.array;
-        for (let i = 1; i < snowCount * 3; i += 3) {
-          pos[i] -= dt * 20;
-          if (pos[i] < 0) pos[i] = 80;
-        }
-        snowParticles.geometry.attributes.position.needsUpdate = true;
+      if (currentSpeed > 6 && lateralSpeed > 2.0) {
+        const points = Math.floor(lateralSpeed * currentSpeed * 6 * dt);
+        totalDriftScore += points;
+        playerCredits += Math.floor(points * 0.05);
       }
 
       // Camera Follow
-      const cameraOffset = new THREE.Vector3(0, 5, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
-      camera.position.lerp(carPos.clone().add(cameraOffset), 0.1);
-      camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 3).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
+      const camOffset = new THREE.Vector3(0, 4.8, -11).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
+      camera.position.lerp(carPos.clone().add(camOffset), 0.12);
+      camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1, 2).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading)));
 
-      // HUD Updates
+      // HUD Update
       document.getElementById('speedometer').innerText = `Speed: ${Math.round(currentSpeed * 3.6)} km/h`;
       document.getElementById('drift-score').innerText = `Drift Points: ${Math.floor(totalDriftScore)}`;
       document.getElementById('credits-hud').innerText = `Credits: $${playerCredits}`;
@@ -577,40 +529,14 @@
       renderer.render(scene, camera);
     }
 
-    // --- UI Controls ---
     function toggleModal(id) {
       const m = document.getElementById(id);
       m.style.display = m.style.display === 'block' ? 'none' : 'block';
     }
 
     function upgradeStat(type) {
-      if (type === 'engine' && playerCredits >= 200) {
-        playerCredits -= 200; enginePower += 10;
-      } else if (type === 'steer' && playerCredits >= 150) {
-        playerCredits -= 150; steeringSensitivity += 0.8;
-      } else if (type === 'tires' && playerCredits >= 250) {
-        playerCredits -= 250; tireGrip -= 0.15;
-      }
-    }
-
-    function buyCar() {
-      if (playerCredits >= 1000 && ownedCarType === 'Standard') {
-        playerCredits -= 1000;
-        ownedCarType = 'Pro GT';
-        bodyMat.color.setHex(0x00cec9);
-        enginePower = 60;
-        steeringSensitivity = 4.5;
-        tireGrip = 0.50;
-        document.getElementById('buy-car').innerText = 'Owned';
-        document.getElementById('buy-car').disabled = true;
-      }
-    }
-
-    function toggleChristmasEvent() {
-      isChristmas = !isChristmas;
-      snowMat.opacity = isChristmas ? 0.8 : 0;
-      document.getElementById('event-hud').innerText = isChristmas ? 'Event: Christmas Mode (2x Points!)' : 'Event: Normal Mode';
-      document.getElementById('event-hud').style.color = isChristmas ? '#ff7675' : '#00cec9';
+      if (type === 'engine' && playerCredits >= 200) { playerCredits -= 200; enginePower += 10; }
+      if (type === 'tires' && playerCredits >= 250) { playerCredits -= 250; tireGrip -= 0.12; }
     }
 
     window.addEventListener('resize', () => {
