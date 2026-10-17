@@ -313,7 +313,7 @@
       const paint = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.6 });
       const darkMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.8 });
       const glass = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9 });
-      const rimMat = new THREE.MeshStandardMaterial({ color: 0xsilver, metalness: 0.8, roughness: 0.2 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.8, roughness: 0.2 }); // FIXED BUG HERE
       const lightMat = new THREE.MeshBasicMaterial({ color: 0xffddaa });
       const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
@@ -471,6 +471,8 @@
       carHeading = Math.PI;
       velocity.set(0,0,0);
       npcCarGroup.visible = false;
+      
+      carGroup.position.copy(carPos); // FIXED BUG HERE
       
       camera.position.set(1005, 5, 990);
       camera.lookAt(carPos);
