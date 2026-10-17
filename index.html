@@ -60,7 +60,6 @@
     .mob-btn:active { background: rgba(255, 255, 255, 0.3); }
     .mob-btn.hb { background: rgba(255, 51, 102, 0.5); border-color: #ff3366; }
 
-    /* Responsive Adjustments */
     @media (max-width: 850px) {
       #mobile-controls { display: flex; }
       #controls-hint { display: none; }
@@ -98,7 +97,6 @@
   <button class="top-btn" id="garage-btn" onclick="enterGarage()">GARAGE</button>
   <button class="top-btn" id="account-btn" onclick="toggleModal('account-modal')">ACCOUNT</button>
 
-  <!-- Mobile Controls -->
   <div id="mobile-controls">
     <div class="mob-panel" style="flex-direction: column; justify-content: flex-end;">
       <div style="display: flex; gap: 10px;">
@@ -115,7 +113,6 @@
     </div>
   </div>
 
-  <!-- Tutorial Modal -->
   <div class="modal" id="tutorial-modal">
     <button class="close-btn" onclick="toggleModal('tutorial-modal')">✕</button>
     <div class="modal-title">How to Play</div>
@@ -123,13 +120,11 @@
       <p><b>Goal:</b> Slide your car around corners to rack up Drift Points!</p>
       <p><b>Controls (PC):</b><br/>- W / S for Gas / Brake<br/>- A / D to Steer<br/>- Spacebar for Handbrake (E-Brake)</p>
       <p><b>Controls (Mobile):</b><br/>- Use the on-screen touch buttons.</p>
-      <p><b>Tandem Drifting:</b> Select a track via the <b>DRIVE</b> menu. A blue NPC car will automatically follow your line. Drift close to them without crashing!</p>
-      <p><b>Surfaces:</b> The Rally stage has less grip (dirt). The Drift Arena is smooth asphalt.</p>
+      <p><b>Tandem Drifting:</b> Select a track via the <b>DRIVE</b> menu. A blue NPC car will automatically follow your line right beside you!</p>
     </div>
     <button class="btn-submit" style="margin-top: 15px;" onclick="toggleModal('tutorial-modal')">Got it!</button>
   </div>
 
-  <!-- Track Selection Modal -->
   <div class="modal" id="track-modal">
     <button class="close-btn" onclick="toggleModal('track-modal')">✕</button>
     <div class="modal-title">Select Location</div>
@@ -147,7 +142,6 @@
     </div>
   </div>
 
-  <!-- Account Modal -->
   <div class="modal" id="account-modal">
     <button class="close-btn" onclick="toggleModal('account-modal')">✕</button>
     <div class="modal-title">Login / Register</div>
@@ -156,7 +150,6 @@
     <button class="btn-submit" onclick="login()">Connect Account</button>
   </div>
 
-  <!-- Multiplayer Modal -->
   <div class="modal" id="mp-modal">
     <button class="close-btn" onclick="toggleModal('mp-modal')">✕</button>
     <div class="modal-title">Multiplayer Servers</div>
@@ -175,7 +168,6 @@
   </div>
 
   <script>
-    // --- 3D Scene Setup ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
     scene.fog = new THREE.FogExp2(0x87ceeb, 0.0025);
@@ -184,108 +176,73 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-    
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const sun = new THREE.DirectionalLight(0xfff5ea, 1.5);
     sun.position.set(200, 300, 100);
     sun.castShadow = true;
-    sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 1000;
-    sun.shadow.camera.left = -200;
-    sun.shadow.camera.right = 200;
-    sun.shadow.camera.top = 200;
-    sun.shadow.camera.bottom = -200;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
     scene.add(sun);
 
-    // --- Garage Environment ---
+    // Garage
     const garageGroup = new THREE.Group();
     scene.add(garageGroup);
-
     function buildGarage() {
       const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-      const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.5 });
-      
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), floorMat);
       floor.rotation.x = -Math.PI / 2;
-      floor.receiveShadow = true;
-      
       const backWall = new THREE.Mesh(new THREE.BoxGeometry(30, 15, 1), wallMat);
       backWall.position.set(0, 7.5, -15);
-      
-      const sideWall1 = new THREE.Mesh(new THREE.BoxGeometry(1, 15, 30), wallMat);
-      sideWall1.position.set(-15, 7.5, 0);
-      
-      const sideWall2 = new THREE.Mesh(new THREE.BoxGeometry(1, 15, 30), wallMat);
-      sideWall2.position.set(15, 7.5, 0);
-
+      const side1 = new THREE.Mesh(new THREE.BoxGeometry(1, 15, 30), wallMat);
+      side1.position.set(-15, 7.5, 0);
+      const side2 = new THREE.Mesh(new THREE.BoxGeometry(1, 15, 30), wallMat);
+      side2.position.set(15, 7.5, 0);
       const roof = new THREE.Mesh(new THREE.BoxGeometry(30, 1, 30), wallMat);
       roof.position.set(0, 15, 0);
-
-      // Garage Lights
-      const pLight1 = new THREE.PointLight(0xffffff, 1, 50);
-      pLight1.position.set(-5, 10, -5);
-      const pLight2 = new THREE.PointLight(0xffffff, 1, 50);
-      pLight2.position.set(5, 10, 5);
-
-      garageGroup.add(floor, backWall, sideWall1, sideWall2, roof, pLight1, pLight2);
-      garageGroup.position.set(1000, 0, 1000); // Far away from tracks
+      garageGroup.add(floor, backWall, side1, side2, roof);
+      garageGroup.position.set(1000, 0, 1000);
     }
     buildGarage();
 
-    // --- Mountain Terrain Generator ---
+    // Terrain generator with correct height calculation
     let terrainMesh = null;
+    function getTerrainHeight(x, z) {
+      let y = Math.sin(x * 0.005) * Math.cos(z * 0.005) * 60;
+      y += Math.sin(x * 0.02) * Math.cos(z * 0.01) * 15;
+      const dist = Math.sqrt(x*x + z*z);
+      if (dist < 150) y *= (dist / 150);
+      return y;
+    }
+
     function buildTerrain(isDirt = false) {
       if (terrainMesh) scene.remove(terrainMesh);
-      
       const geo = new THREE.PlaneGeometry(2000, 2000, 128, 128);
       geo.rotateX(-Math.PI / 2);
-      
       const pos = geo.attributes.position;
       for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i);
         const z = pos.getZ(i);
-        // Procedural hills using sine waves
-        let y = Math.sin(x * 0.005) * Math.cos(z * 0.005) * 60;
-        y += Math.sin(x * 0.02) * Math.cos(z * 0.01) * 15;
-        
-        // Flatten center for arena/start
-        const dist = Math.sqrt(x*x + z*z);
-        if (dist < 150) y *= (dist / 150); 
-        
-        pos.setY(i, y);
+        pos.setY(i, getTerrainHeight(x, z));
       }
       geo.computeVertexNormals();
-
-      const color = isDirt ? 0x5c4033 : 0x3d5c2a; // Brown for rally, green for mountain
-      const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 1.0 });
-      terrainMesh = new THREE.Mesh(geo, mat);
+      terrainMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: isDirt ? 0x5c4033 : 0x3d5c2a, roughness: 1.0 }));
       terrainMesh.receiveShadow = true;
       terrainMesh.position.y = -0.5;
       scene.add(terrainMesh);
     }
 
-    // --- Smoke / Dirt Particle System ---
+    // Particles
     const particles = [];
     const smokeGeo = new THREE.SphereGeometry(0.3, 6, 6);
     let currentParticleColor = 0xeeeeee;
-    
     function createParticle(pos) {
-      const pMat = new THREE.MeshBasicMaterial({ color: currentParticleColor, transparent: true, opacity: 0.6 });
-      const p = new THREE.Mesh(smokeGeo, pMat);
+      const p = new THREE.Mesh(smokeGeo, new THREE.MeshBasicMaterial({ color: currentParticleColor, transparent: true, opacity: 0.6 }));
       p.position.copy(pos);
-      p.position.y = 0.2;
+      p.position.y += 0.2;
       scene.add(p);
       particles.push({ mesh: p, life: 1.0 });
     }
-
     function updateParticles(dt) {
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
@@ -293,7 +250,6 @@
         p.mesh.scale.addScalar(dt * 4.0);
         p.mesh.material.opacity = p.life * 0.4;
         p.mesh.position.y += dt * 1.5;
-
         if (p.life <= 0) {
           scene.remove(p.mesh);
           p.mesh.material.dispose();
@@ -302,67 +258,39 @@
       }
     }
 
-    // --- High-Quality Car Builder ---
+    // Car builder
     let activeWingMesh = null;
     let wheelsList = [];
-
     function buildDetailedCar(colorHex = 0xd63031, isNPC = false) {
       const car = new THREE.Group();
       const localWheels = [];
-
       const paint = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.6 });
       const darkMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.8 });
-      const glass = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9 });
-      const rimMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.8, roughness: 0.2 }); // FIXED BUG HERE
-      const lightMat = new THREE.MeshBasicMaterial({ color: 0xffddaa });
-      const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const glass = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3, metalness: 0.3 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.8, roughness: 0.2 });
 
-      // Main Body
       const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 4.4), paint);
       bodyMesh.position.y = 0.6;
-      bodyMesh.castShadow = true;
       car.add(bodyMesh);
 
-      // Cabin
       const cabinMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 2.2), glass);
       cabinMesh.position.set(0, 1.15, -0.2);
       car.add(cabinMesh);
 
-      // Headlights
-      const hL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.1), lightMat);
-      hL.position.set(0.6, 0.7, 2.21);
-      const hR = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.1), lightMat);
-      hR.position.set(-0.6, 0.7, 2.21);
-      car.add(hL, hR);
-
-      // Taillights
-      const tL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.1), tailLightMat);
-      tL.position.set(0.6, 0.7, -2.21);
-      const tR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.1), tailLightMat);
-      tR.position.set(-0.6, 0.7, -2.21);
-      car.add(tL, tR);
-
-      // Wheels
       const wPos = [[0.95, 0.38, 1.4], [-0.95, 0.38, 1.4], [0.95, 0.38, -1.4], [-0.95, 0.38, -1.4]];
       wPos.forEach(pos => {
         const pivot = new THREE.Group();
         pivot.position.set(...pos);
-
         const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.35, 16), darkMat);
         tire.rotation.z = Math.PI / 2;
-        tire.castShadow = true;
-
         const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.37, 8), rimMat);
         rim.rotation.z = Math.PI / 2;
-
         pivot.add(tire, rim);
         localWheels.push(pivot);
         car.add(pivot);
       });
-
       if (!isNPC) wheelsList = localWheels;
 
-      // Active Wing
       const wingGroup = new THREE.Group();
       wingGroup.position.set(0, 0.9, -2.0);
       const stand = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.1), darkMat);
@@ -370,31 +298,30 @@
       const blade = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.05, 0.5), darkMat);
       blade.position.y = 0.4;
       wingGroup.add(stand, blade);
-      
       if (!isNPC) activeWingMesh = blade;
       car.add(wingGroup);
 
       return car;
     }
 
-    // --- Track Generator ---
+    // Tracks
     const trackGroup = new THREE.Group();
     scene.add(trackGroup);
 
     function createRibbonTrack(curvePoints, width = 20, isDirt = false) {
       const curve = new THREE.CatmullRomCurve3(curvePoints, true);
       const points = curve.getSpacedPoints(400);
-      const geometry = new THREE.BufferGeometry();
-      const vertices = [], indices = [], uvs = [];
-
+      const geo = new THREE.BufferGeometry();
+      const vertices = [], indices = [];
       for (let i = 0; i < points.length; i++) {
         const p = points[i];
         const nextP = points[(i + 1) % points.length];
         const dir = new THREE.Vector3().subVectors(nextP, p).normalize();
         const side = new THREE.Vector3(0, 1, 0).cross(dir).normalize().multiplyScalar(width / 2);
+        const roadY = getTerrainHeight(p.x, p.z) + 0.15;
 
-        vertices.push(p.x + side.x, p.y + 0.1, p.z + side.z);
-        vertices.push(p.x - side.x, p.y + 0.1, p.z - side.z);
+        vertices.push(p.x + side.x, roadY, p.z + side.z);
+        vertices.push(p.x - side.x, roadY, p.z - side.z);
 
         if (i < points.length - 1) {
           const base = i * 2;
@@ -402,29 +329,19 @@
           indices.push(base + 1, base + 3, base + 2);
         }
       }
-
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-      geometry.setIndex(indices);
-      geometry.computeVertexNormals();
-
-      const color = isDirt ? 0x8b5a2b : 0x222225; // Dirt track vs Asphalt
-      const roughness = isDirt ? 1.0 : 0.6;
-      const material = new THREE.MeshStandardMaterial({ color: color, side: THREE.DoubleSide, roughness: roughness });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.receiveShadow = true;
-      return mesh;
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: isDirt ? 0x8b5a2b : 0x222225, side: THREE.DoubleSide, roughness: 0.8 }));
     }
 
-    // Track Layouts
     function buildMountainPass() {
       const pts = [];
       for (let i = 0; i < 150; i++) {
         const t = (i / 150) * Math.PI * 4;
         const x = Math.sin(t) * 300 + Math.cos(t * 0.5) * 50;
         const z = Math.cos(t) * 300;
-        // Match terrain height roughly
-        let y = Math.sin(x * 0.005) * Math.cos(z * 0.005) * 60;
-        pts.push(new THREE.Vector3(x, y, z));
+        pts.push(new THREE.Vector3(x, getTerrainHeight(x, z), z));
       }
       trackGroup.add(createRibbonTrack(pts, 24, false));
       return pts[0];
@@ -436,18 +353,15 @@
         const t = (i / 200) * Math.PI * 6;
         const x = Math.sin(t * 1.2) * 400;
         const z = Math.cos(t) * 400 + Math.sin(t * 0.5) * 100;
-        let y = Math.sin(x * 0.005) * Math.cos(z * 0.005) * 60;
-        pts.push(new THREE.Vector3(x, y, z));
+        pts.push(new THREE.Vector3(x, getTerrainHeight(x, z), z));
       }
       trackGroup.add(createRibbonTrack(pts, 18, true));
       return pts[0];
     }
 
-    // Globals
-    let gameState = 'garage'; // 'garage' or 'driving'
+    let gameState = 'garage';
     let currentTraction = 1.0;
-    
-    let carPos = new THREE.Vector3(1000, 0.8, 1000); // Start in garage
+    let carPos = new THREE.Vector3(1000, 0.8, 1000);
     let velocity = new THREE.Vector3();
     let carHeading = 0;
     let driftScore = 0;
@@ -465,17 +379,12 @@
       gameState = 'garage';
       while (trackGroup.children.length > 0) trackGroup.remove(trackGroup.children[0]);
       buildTerrain(false);
-      
       document.getElementById('track-hud').innerText = "Location: Garage";
       carPos.set(1000, 0.8, 1000);
       carHeading = Math.PI;
       velocity.set(0,0,0);
       npcCarGroup.visible = false;
-      
-      carGroup.position.copy(carPos); // FIXED BUG HERE
-      
-      camera.position.set(1005, 5, 990);
-      camera.lookAt(carPos);
+      carGroup.position.copy(carPos);
     }
 
     function selectTrack(type) {
@@ -489,38 +398,33 @@
         startPos = buildMountainPass();
         document.getElementById('track-hud').innerText = "Location: Alpine Mountain Pass";
         currentTraction = 0.985;
-        currentParticleColor = 0xeeeeee; // White tire smoke
+        currentParticleColor = 0xeeeeee;
       } else if (type === 'rally') {
         buildTerrain(true);
         startPos = buildRallyStage();
         document.getElementById('track-hud').innerText = "Location: Forest Rally Stage";
-        currentTraction = 0.995; // More sliding on dirt
-        currentParticleColor = 0x8b5a2b; // Brown dirt kickup
+        currentTraction = 0.995;
+        currentParticleColor = 0x8b5a2b;
       } else {
-        // Arena
         buildTerrain(false);
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.7 }));
         floor.rotation.x = -Math.PI / 2;
-        floor.position.y = 0.1;
+        floor.position.y = 0.05;
         trackGroup.add(floor);
-        startPos = new THREE.Vector3(0, 0.1, 0);
+        startPos = new THREE.Vector3(0, 0.05, 0);
         document.getElementById('track-hud').innerText = "Location: Pro Drift Arena";
         currentTraction = 0.98;
         currentParticleColor = 0xeeeeee;
       }
 
-      carPos.copy(startPos).add(new THREE.Vector3(0, 0.8, 0));
+      carPos.copy(startPos).add(new THREE.Vector3(0, 0.5, 0));
       carHeading = 0;
       velocity.set(0, 0, 0);
-      
-      // Reset NPC behind player
       npcPos.copy(carPos).add(new THREE.Vector3(-3, 0, -8));
       npcHeading = 0;
-
       toggleModal('track-modal');
     }
 
-    // UI Functions
     function toggleModal(id) {
       const m = document.getElementById(id);
       if (m) m.style.display = m.style.display === 'block' ? 'none' : 'block';
@@ -538,10 +442,7 @@
       toggleModal('mp-modal');
     }
 
-    // --- Inputs & Controls ---
     const keys = { forward: false, backward: false, left: false, right: false, handbrake: false };
-    
-    // Keyboard bindings
     window.addEventListener('keydown', e => {
       if (['ArrowUp', 'KeyW'].includes(e.code)) keys.forward = true;
       if (['ArrowDown', 'KeyS'].includes(e.code)) keys.backward = true;
@@ -557,7 +458,6 @@
       if (e.code === 'Space') keys.handbrake = false;
     });
 
-    // Mobile touch bindings
     const bindTouch = (id, key) => {
       const el = document.getElementById(id);
       el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
@@ -570,13 +470,9 @@
     bindTouch('mob-brake', 'backward');
     bindTouch('mob-hb', 'handbrake');
 
-    // Show tutorial on first load
     window.onload = () => { toggleModal('tutorial-modal'); };
-
-    // Start in Garage
     enterGarage();
 
-    // Resize handler
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -595,25 +491,13 @@
         if (keys.forward) velocity.addScaledVector(forwardDir, 50 * dt);
         if (keys.backward) velocity.addScaledVector(forwardDir, -30 * dt);
 
-        // Apply traction modifier (rally dirt = less grip/friction, asphalt = more grip)
         const friction = keys.handbrake ? 0.94 : currentTraction;
         velocity.multiplyScalar(friction);
-        
-        // Basic gravity/terrain hugging mapping
         carPos.addScaledVector(velocity, dt);
-        
-        // Simple height snapping for mountain terrain
-        if (terrainMesh) {
-          const x = carPos.x;
-          const z = carPos.z;
-          let y = Math.sin(x * 0.005) * Math.cos(z * 0.005) * 60;
-          y += Math.sin(x * 0.02) * Math.cos(z * 0.01) * 15;
-          const dist = Math.sqrt(x*x + z*z);
-          if (dist < 150) y *= (dist / 150);
-          
-          // Smooth vertical transition
-          carPos.y = THREE.MathUtils.lerp(carPos.y, y + 0.8, 10 * dt);
-        }
+
+        // Correct Ground Collision (Snaps car to terrain height)
+        const groundHeight = getTerrainHeight(carPos.x, carPos.z);
+        carPos.y = Math.max(carPos.y, groundHeight + 0.35);
 
         carGroup.position.copy(carPos);
         carGroup.rotation.y = carHeading;
@@ -621,14 +505,14 @@
         const currentSpeed = velocity.length();
         document.getElementById('speedometer').innerText = `Speed: ${Math.round(currentSpeed * 3.6)} km/h`;
 
-        // Tandem NPC Logic (Local Offset)
+        // Fixed NPC Tandem Offset (Properly positioned beside your door, away from camera)
         if (npcCarGroup.visible) {
           const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
           const targetNPCPos = carPos.clone()
-            .sub(forwardDir.clone().multiplyScalar(6.0))
-            .add(rightDir.multiplyScalar(3.5));
+            .sub(forwardDir.clone().multiplyScalar(2.0))
+            .add(rightDir.multiplyScalar(4.5));
           
-          targetNPCPos.y = carPos.y; // Match height
+          targetNPCPos.y = Math.max(targetNPCPos.y, getTerrainHeight(targetNPCPos.x, targetNPCPos.z) + 0.35);
           
           npcPos.lerp(targetNPCPos, 3.5 * dt);
           npcHeading = THREE.MathUtils.lerp(npcHeading, carHeading, 5.0 * dt);
@@ -636,14 +520,11 @@
           npcCarGroup.position.copy(npcPos);
           npcCarGroup.rotation.y = npcHeading;
           
-          // NPC Smoke
           if (currentSpeed > 5 && (Math.abs(turnInput) > 0 || keys.handbrake)) {
-            const npcSmokePos = npcPos.clone().sub(forwardDir.clone().multiplyScalar(2));
-            createParticle(npcSmokePos);
+            createParticle(npcPos.clone().sub(forwardDir.clone().multiplyScalar(2)));
           }
         }
 
-        // Player Drift & Particles
         const isDrifting = (keys.handbrake && currentSpeed > 3) || (Math.abs(turnInput) > 0 && currentSpeed > 10);
         if (isDrifting) {
           wheelsList.slice(2).forEach(w => {
@@ -651,30 +532,26 @@
             w.getWorldPosition(worldPos);
             createParticle(worldPos);
           });
-          driftScore += Math.round(currentSpeed * (currentTraction === 0.995 ? 3 : 2)); // Bonus for rally
+          driftScore += Math.round(currentSpeed * (currentTraction === 0.995 ? 3 : 2));
           document.getElementById('drift-score').innerText = `Drift Points: ${driftScore}`;
         }
 
-        // Wheels animation
         wheelsList.forEach((w, index) => {
-          w.children[0].rotation.x += currentSpeed * dt * 3; // tire
-          w.children[1].rotation.x += currentSpeed * dt * 3; // rim
-          if (index < 2) w.rotation.y = turnInput * 0.5; // Steer front
+          w.children[0].rotation.x += currentSpeed * dt * 3;
+          w.children[1].rotation.x += currentSpeed * dt * 3;
+          if (index < 2) w.rotation.y = turnInput * 0.5;
         });
 
-        // Active Aero
         if (activeWingMesh) {
           const targetRot = (keys.backward || keys.handbrake) ? -Math.PI / 4 : 0;
           activeWingMesh.rotation.x = THREE.MathUtils.lerp(activeWingMesh.rotation.x, targetRot, 0.2);
         }
 
-        // Camera Follow
-        const camOffset = new THREE.Vector3(0, 5, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
+        const camOffset = new THREE.Vector3(0, 5, -16).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
         camera.position.lerp(carPos.clone().add(camOffset), 0.15);
-        camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 2, 0)));
+        camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.5, 0)));
 
       } else {
-        // Garage Camera orbiting
         const time = clock.getElapsedTime();
         camera.position.x = 1000 + Math.sin(time * 0.5) * 8;
         camera.position.z = 1000 + Math.cos(time * 0.5) * 8;
