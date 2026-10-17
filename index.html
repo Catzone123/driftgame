@@ -3,75 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Ultimate 3D Drift & Rally Simulator</title>
+  <title>Ultimate 4K/Potato Drift & Rally Simulator</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #87ceeb; touch-action: none; }
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #000; touch-action: none; }
     #canvas-container { width: 100vw; height: 100vh; }
-    #ui { position: absolute; top: 20px; left: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); pointer-events: none; z-index: 10; }
-    .hud-title { font-size: 26px; font-weight: 900; margin-bottom: 5px; letter-spacing: 2px; color: #00d2ff; text-transform: uppercase; }
-    .hud-stat { font-size: 16px; margin: 3px 0; font-weight: 600; }
     
-    #health-bar-container {
-      width: 180px; height: 12px; background: rgba(0,0,0,0.6);
-      border-radius: 6px; overflow: hidden; margin-top: 5px; border: 1px solid #fff;
-    }
-    #health-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #00b894, #55efc4); }
+    /* HUD UI */
+    #ui { position: absolute; top: 20px; left: 20px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,1); pointer-events: none; z-index: 10; }
+    .hud-title { font-size: 28px; font-weight: 900; letter-spacing: 2px; color: #00d2ff; text-transform: uppercase; margin-bottom: 5px;}
+    .hud-stat { font-size: 16px; margin: 3px 0; font-weight: 600; }
+    #cash-display { color: #2ecc71; font-size: 20px; font-weight: bold; margin-top: 10px; }
+    
+    /* Hint & Chat */
+    #controls-hint { position: absolute; bottom: 20px; right: 20px; color: #fff; text-align: right; font-size: 14px; background: rgba(0,0,0,0.8); padding: 12px 18px; border-radius: 8px; border: 1px solid #444; z-index: 10; pointer-events: none;}
+    #chat-container { position: absolute; bottom: 20px; left: 20px; width: 300px; z-index: 20; background: rgba(0,0,0,0.7); border-radius: 8px; padding: 10px; border: 1px solid #555; display: none; }
+    #chat-log { height: 100px; overflow-y: auto; color: #fff; font-size: 13px; margin-bottom: 8px; display: flex; flex-direction: column; justify-content: flex-end; }
+    .chat-msg { margin: 2px 0; }
+    #chat-input { width: 100%; padding: 6px; box-sizing: border-box; background: rgba(255,255,255,0.1); border: 1px solid #777; color: #fff; border-radius: 4px; }
 
-    #controls-hint {
-      position: absolute; bottom: 20px; left: 20px; color: #fff;
-      font-size: 14px; background: rgba(0,0,0,0.7); padding: 12px 18px; border-radius: 8px; pointer-events: none; border: 1px solid #444; z-index: 10;
-    }
+    /* Zen Inventory */
+    #inventory-bar { display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 8px; border-radius: 10px; z-index: 25; gap: 10px; border: 2px solid #555; }
+    .inv-slot { width: 45px; height: 45px; border: 2px solid #777; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: white; font-weight: bold; }
+    .inv-slot.active { border-color: #f1c40f; background: rgba(241, 196, 15, 0.2); }
 
-    .top-btn {
-      position: absolute; top: 20px; padding: 10px 18px; color: #fff;
-      border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; text-transform: uppercase; transition: 0.2s; z-index: 20;
-    }
+    /* Top Nav Buttons */
+    .top-btn { position: absolute; top: 20px; padding: 10px 18px; color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; text-transform: uppercase; transition: 0.2s; z-index: 20; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     .top-btn:hover { transform: scale(1.05); }
-    #account-btn { right: 20px; background: #00b894; }
-    #garage-btn { right: 130px; background: #ff3366; }
-    #track-btn { right: 230px; background: #0984e3; }
-    #mp-btn { right: 320px; background: #6c5ce7; }
-    #tutorial-btn { right: 460px; background: #e17055; }
-
-    .modal {
-      display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 420px; max-width: 90vw; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.9); border: 1px solid #444; z-index: 100; backdrop-filter: blur(5px);
-    }
-    .modal-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #555; padding-bottom: 8px; color: #fff; }
-    .shop-item { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; }
+    
+    #zen-btn { right: 20px; background: #8e44ad; }
+    #garage-btn { right: 100px; background: #e67e22; }
+    #dealer-btn { right: 195px; background: #e74c3c; }
+    #track-btn { right: 295px; background: #0984e3; }
+    #gfx-btn { right: 385px; background: #2c3e50; border: 2px solid #00d2ff; }
+    
+    /* Modals */
+    .modal { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; max-width: 90vw; background: rgba(15, 15, 20, 0.95); color: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); border: 1px solid #444; z-index: 100; backdrop-filter: blur(10px); }
+    .modal-title { font-size: 24px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #555; padding-bottom: 8px; color: #fff; }
+    .shop-item { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+    .item-desc { font-size: 12px; color: #aaa; margin-top: 4px; }
     .btn-buy { background: linear-gradient(45deg, #0984e3, #74b9ff); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     .btn-buy:hover { background: linear-gradient(45deg, #74b9ff, #0984e3); }
+    .btn-buy.owned { background: #27ae60; cursor: default; }
+    .btn-buy.equip { background: #f39c12; }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
     
-    .form-input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 4px; border: none; background: #222; color: #fff; box-sizing: border-box; }
-    .btn-submit { width: 100%; padding: 12px; background: #00b894; border: none; color: white; font-weight: bold; border-radius: 4px; cursor: pointer; }
-
-    /* Mobile Controls UI */
-    #mobile-controls {
-      display: none; position: absolute; bottom: 20px; width: 100%; padding: 0 20px; 
-      box-sizing: border-box; justify-content: space-between; pointer-events: none; z-index: 50;
-    }
-    .mob-panel { display: flex; gap: 10px; pointer-events: auto; }
-    .mob-btn {
-      background: rgba(0, 0, 0, 0.5); border: 2px solid rgba(255, 255, 255, 0.3); color: white; 
-      padding: 15px 25px; font-size: 20px; border-radius: 12px; font-weight: bold; user-select: none;
-    }
-    .mob-btn:active { background: rgba(255, 255, 255, 0.3); }
-    .mob-btn.hb { background: rgba(255, 51, 102, 0.5); border-color: #ff3366; }
-
-    @media (max-width: 850px) {
-      #mobile-controls { display: flex; }
-      #controls-hint { display: none; }
-      .top-btn { font-size: 11px; padding: 8px 10px; top: 10px; }
-      #account-btn { right: 10px; }
-      #garage-btn { right: 100px; }
-      #track-btn { right: 180px; }
-      #mp-btn { right: 250px; }
-      #tutorial-btn { right: 350px; }
-      .hud-title { font-size: 18px; }
-      .hud-stat { font-size: 14px; }
-    }
+    #zen-hint { display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 8px; z-index: 15; text-align: center; border: 1px solid #555; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -80,134 +56,343 @@
   <div id="canvas-container"></div>
   
   <div id="ui">
-    <div class="hud-title">DRIFT & RALLY SIMULATOR</div>
-    <div class="hud-stat" id="user-display" style="color: #55efc4;">Account: Guest</div>
+    <div class="hud-title">DRIFT & RALLY</div>
+    <div class="hud-stat" id="track-hud" style="color: #74b9ff;">Location: Garage</div>
+    <div class="hud-stat" id="car-hud" style="color: #e74c3c;">Vehicle: Starter JDM</div>
     <div class="hud-stat" id="speedometer">Speed: 0 km/h</div>
     <div class="hud-stat" id="drift-score">Drift Points: 0</div>
-    <div class="hud-stat" id="track-hud" style="color: #74b9ff;">Location: Garage</div>
-    <div class="hud-stat" id="car-hud" style="color: #fd79a8;">Vehicle: JDM Tuner V2</div>
-    <div class="hud-stat" id="mp-status" style="color: #a29bfe;">Multiplayer: Offline</div>
-    <div class="hud-stat" style="margin-top: 10px;">Car Condition:</div>
-    <div id="health-bar-container"><div id="health-bar"></div></div>
+    <div id="cash-display">Cash: $5000</div>
   </div>
 
-  <button class="top-btn" id="tutorial-btn" onclick="toggleModal('tutorial-modal')">TUTORIAL</button>
-  <button class="top-btn" id="mp-btn" onclick="toggleModal('mp-modal')">MULTIPLAYER</button>
+  <div id="chat-container">
+    <div id="chat-log"><div class="chat-msg" style="color: #a29bfe;">[System]: Type 'tandem' to race NPC.</div></div>
+    <input type="text" id="chat-input" placeholder="Press Enter to chat..." autocomplete="off">
+  </div>
+
+  <div id="inventory-bar">
+    <div class="inv-slot active" onclick="selectBlock(0, 0x27ae60)" style="background:#27ae60">Grass</div>
+    <div class="inv-slot" onclick="selectBlock(1, 0x8e44ad)" style="background:#8e44ad">Wood</div>
+    <div class="inv-slot" onclick="selectBlock(2, 0x7f8c8d)" style="background:#7f8c8d">Stone</div>
+    <div class="inv-slot" onclick="selectBlock(3, 0xc0392b)" style="background:#c0392b">Brick</div>
+  </div>
+
+  <button class="top-btn" id="gfx-btn" onclick="toggleGraphics()">GFX: 4K</button>
   <button class="top-btn" id="track-btn" onclick="toggleModal('track-modal')">DRIVE</button>
-  <button class="top-btn" id="garage-btn" onclick="enterGarage()">GARAGE</button>
-  <button class="top-btn" id="account-btn" onclick="toggleModal('account-modal')">ACCOUNT</button>
+  <button class="top-btn" id="dealer-btn" onclick="toggleModal('dealer-modal')">DEALER</button>
+  <button class="top-btn" id="garage-btn" onclick="toggleModal('garage-modal'); enterGarage();">PARTS</button>
+  <button class="top-btn" id="zen-btn" onclick="enterZenMode()">ZEN</button>
 
-  <div id="mobile-controls">
-    <div class="mob-panel" style="flex-direction: column; justify-content: flex-end;">
-      <div style="display: flex; gap: 10px;">
-        <button class="mob-btn" id="mob-left">◀</button>
-        <button class="mob-btn" id="mob-right">▶</button>
-      </div>
-    </div>
-    <div class="mob-panel" style="flex-direction: column; align-items: flex-end;">
-      <button class="mob-btn hb" id="mob-hb">E-BRAKE</button>
-      <div style="display: flex; gap: 10px; margin-top: 10px;">
-        <button class="mob-btn" id="mob-brake">BRAKE</button>
-        <button class="mob-btn" id="mob-gas">GAS</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal" id="tutorial-modal">
-    <button class="close-btn" onclick="toggleModal('tutorial-modal')">✕</button>
-    <div class="modal-title">How to Play</div>
-    <div style="line-height: 1.6; font-size: 15px;">
-      <p><b>Goal:</b> Slide your car around corners to rack up Drift Points!</p>
-      <p><b>Controls (PC):</b><br/>- W / S for Gas / Brake<br/>- A / D to Steer<br/>- Spacebar for Handbrake (E-Brake)</p>
-      <p><b>Controls (Mobile):</b><br/>- Use the on-screen touch buttons.</p>
-      <p><b>Tandem Drifting:</b> Select a track via the <b>DRIVE</b> menu. A blue NPC car will automatically follow your line right beside you!</p>
-    </div>
-    <button class="btn-submit" style="margin-top: 15px;" onclick="toggleModal('tutorial-modal')">Got it!</button>
-  </div>
+  <div id="controls-hint"><b>Drive:</b> W A S D | <b>E-Brake:</b> Space | <b>Chat:</b> Enter</div>
+  <div id="zen-hint"><b>Minecraft Voxel & Mobs Mode</b><br/>Click: Place | Shift+Click: Destroy</div>
 
   <div class="modal" id="track-modal">
     <button class="close-btn" onclick="toggleModal('track-modal')">✕</button>
     <div class="modal-title">Select Location</div>
+    <div class="shop-item"><span>🏔️ Mountain Pass</span><button class="btn-buy" onclick="selectTrack('mountain')">Drift</button></div>
+    <div class="shop-item"><span>🏎️ Pro Arena</span><button class="btn-buy" onclick="selectTrack('arena')">Roam</button></div>
+  </div>
+
+  <div class="modal" id="dealer-modal">
+    <button class="close-btn" onclick="toggleModal('dealer-modal')">✕</button>
+    <div class="modal-title">Car Dealership</div>
+    <div id="dealer-cash" style="color:#2ecc71; font-weight:bold; margin-bottom: 10px;"></div>
+    
     <div class="shop-item">
-      <span>🏔️ Alpine Mountain Pass</span>
-      <button class="btn-buy" onclick="selectTrack('mountain')">Drift</button>
+      <div><b>Starter JDM</b><div class="item-desc">Balanced, RWD. (Color: Red)</div></div>
+      <button class="btn-buy equip" id="car-btn-0" onclick="buyCar(0, 0)">Equipped</button>
     </div>
     <div class="shop-item">
-      <span>🌲 Forest Rally Stage (Dirt)</span>
-      <button class="btn-buy" onclick="selectTrack('rally')">Race</button>
+      <div><b>Euro Supercar</b><div class="item-desc">High Grip, AWD. (Color: Yellow)</div></div>
+      <button class="btn-buy" id="car-btn-1" onclick="buyCar(1, 15000)">$15,000</button>
     </div>
     <div class="shop-item">
-      <span>🏎️ Pro Drift Arena</span>
-      <button class="btn-buy" onclick="selectTrack('arena')">Tandem</button>
+      <div><b>Muscle Beast</b><div class="item-desc">Massive Power, Low Grip. (Color: Black)</div></div>
+      <button class="btn-buy" id="car-btn-2" onclick="buyCar(2, 25000)">$25,000</button>
     </div>
   </div>
 
-  <div class="modal" id="account-modal">
-    <button class="close-btn" onclick="toggleModal('account-modal')">✕</button>
-    <div class="modal-title">Login / Register</div>
-    <input type="text" class="form-input" id="username" placeholder="Username">
-    <input type="password" class="form-input" placeholder="Password">
-    <button class="btn-submit" onclick="login()">Connect Account</button>
-  </div>
-
-  <div class="modal" id="mp-modal">
-    <button class="close-btn" onclick="toggleModal('mp-modal')">✕</button>
-    <div class="modal-title">Multiplayer Servers</div>
+  <div class="modal" id="garage-modal">
+    <button class="close-btn" onclick="toggleModal('garage-modal')">✕</button>
+    <div class="modal-title">Parts Shop</div>
+    <div id="garage-cash" style="color:#2ecc71; font-weight:bold; margin-bottom: 10px;"></div>
+    
     <div class="shop-item">
-      <span>Server: Asia-East (Ping: 42ms)</span>
-      <button class="btn-buy" onclick="connectMP()">Join</button>
+      <div><b>Turbocharger</b><div class="item-desc" id="lvl-turbo">Level 1 - Boosts Top Speed</div></div>
+      <button class="btn-buy" id="buy-turbo" onclick="buyPart('turbo', 2000)">$2,000</button>
     </div>
     <div class="shop-item">
-      <span>Server: US-West (Ping: 130ms)</span>
-      <button class="btn-buy" onclick="connectMP()">Join</button>
+      <div><b>Racing Suspension</b><div class="item-desc" id="lvl-susp">Level 1 - Better Handling</div></div>
+      <button class="btn-buy" id="buy-susp" onclick="buyPart('susp', 1500)">$1,500</button>
     </div>
-  </div>
-
-  <div id="controls-hint">
-    <b>Controls:</b> W/Up = Gas | S/Down = Brake | A/D = Steer | Space = Handbrake
+    <div class="shop-item">
+      <div><b>Weight Reduction</b><div class="item-desc" id="lvl-weight">Level 1 - Faster Acceleration</div></div>
+      <button class="btn-buy" id="buy-weight" onclick="buyPart('weight', 3000)">$3,000</button>
+    </div>
+    <div class="shop-item">
+      <div><b>Ceramic Brakes</b><div class="item-desc" id="lvl-brakes">Level 1 - Stronger Stopping</div></div>
+      <button class="btn-buy" id="buy-brakes" onclick="buyPart('brakes', 1000)">$1,000</button>
+    </div>
   </div>
 
   <script>
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.FogExp2(0x87ceeb, 0.0025);
-
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+    scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);
+    
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4000);
+    
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    
+    let is4K = true;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio * 1.5, 2)); 
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const sun = new THREE.DirectionalLight(0xfff5ea, 1.5);
-    sun.position.set(200, 300, 100);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const sun = new THREE.DirectionalLight(0xfff5ea, 2.0);
+    sun.position.set(300, 400, 200);
     sun.castShadow = true;
+    sun.shadow.mapSize.width = 4096;
+    sun.shadow.mapSize.height = 4096;
+    sun.shadow.camera.near = 0.5;
+    sun.shadow.camera.far = 1500;
+    sun.shadow.camera.left = -300;
+    sun.shadow.camera.right = 300;
+    sun.shadow.camera.top = 300;
+    sun.shadow.camera.bottom = -300;
+    sun.shadow.bias = -0.0005;
     scene.add(sun);
 
-    // Garage
-    const garageGroup = new THREE.Group();
-    scene.add(garageGroup);
-    function buildGarage() {
-      const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-      const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), floorMat);
-      floor.rotation.x = -Math.PI / 2;
-      const backWall = new THREE.Mesh(new THREE.BoxGeometry(30, 15, 1), wallMat);
-      backWall.position.set(0, 7.5, -15);
-      const side1 = new THREE.Mesh(new THREE.BoxGeometry(1, 15, 30), wallMat);
-      side1.position.set(-15, 7.5, 0);
-      const side2 = new THREE.Mesh(new THREE.BoxGeometry(1, 15, 30), wallMat);
-      side2.position.set(15, 7.5, 0);
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(30, 1, 30), wallMat);
-      roof.position.set(0, 15, 0);
-      garageGroup.add(floor, backWall, side1, side2, roof);
-      garageGroup.position.set(1000, 0, 1000);
+    function toggleGraphics() {
+      is4K = !is4K;
+      const btn = document.getElementById('gfx-btn');
+      if (is4K) {
+        btn.innerText = "GFX: 4K";
+        btn.style.color = "#fff";
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio * 1.5, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        sun.castShadow = true;
+      } else {
+        btn.innerText = "GFX: POTATO";
+        btn.style.color = "#f1c40f";
+        renderer.setPixelRatio(1);
+        renderer.toneMapping = THREE.LinearToneMapping;
+        renderer.shadowMap.type = THREE.BasicShadowMap;
+        sun.castShadow = false;
+      }
+      scene.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.needsUpdate = true;
+        }
+      });
     }
-    buildGarage();
 
-    // Terrain generator with correct height calculation
+    let gameState = 'garage'; 
+    let playerCash = 5000;
+    let driftScore = 0;
+    const clock = new THREE.Clock();
+    
+    const carDB = [
+      { name: "Starter JDM", color: 0xd63031, basePower: 50, baseTraction: 0.985, owned: true },
+      { name: "Euro Supercar", color: 0xf1c40f, basePower: 80, baseTraction: 0.995, owned: false },
+      { name: "Muscle Beast", color: 0x111111, basePower: 95, baseTraction: 0.970, owned: false }
+    ];
+    let currentCarIndex = 0;
+
+    const parts = {
+      turbo: { lvl: 1, cost: 2000, max: 5 },
+      susp: { lvl: 1, cost: 1500, max: 5 },
+      weight: { lvl: 1, cost: 3000, max: 5 },
+      brakes: { lvl: 1, cost: 1000, max: 5 }
+    };
+    
+    let carPos = new THREE.Vector3(1000, 0.8, 1000);
+    let velocity = new THREE.Vector3();
+    let carHeading = 0;
+    let wheelsList = [];
+    
+    let npcState = 'wander'; 
+    let npcPos = new THREE.Vector3(1010, 0.8, 1010);
+    let npcVelocity = new THREE.Vector3();
+    let npcHeading = 0;
+    let npcTurnAngle = 0;
+
+    function updateCashDisplay() {
+      document.getElementById('cash-display').innerText = `Cash: $${playerCash}`;
+      if(document.getElementById('dealer-modal').style.display === 'block') document.getElementById('dealer-cash').innerText = `Available Cash: $${playerCash}`;
+      if(document.getElementById('garage-modal').style.display === 'block') document.getElementById('garage-cash').innerText = `Available Cash: $${playerCash}`;
+    }
+
+    function toggleModal(id) {
+      document.querySelectorAll('.modal').forEach(m => { if(m.id !== id) m.style.display = 'none'; });
+      const m = document.getElementById(id);
+      m.style.display = m.style.display === 'block' ? 'none' : 'block';
+      updateCashDisplay();
+    }
+
+    function buyCar(index, cost) {
+      if (carDB[index].owned) {
+        currentCarIndex = index;
+        document.getElementById('car-hud').innerText = `Vehicle: ${carDB[index].name}`;
+        rebuildPlayerCar();
+        updateCarButtons();
+      } else if (playerCash >= cost) {
+        playerCash -= cost;
+        carDB[index].owned = true;
+        currentCarIndex = index;
+        document.getElementById('car-hud').innerText = `Vehicle: ${carDB[index].name}`;
+        rebuildPlayerCar();
+        updateCarButtons();
+        updateCashDisplay();
+      } else {
+        alert("Not enough cash! Go drift.");
+      }
+    }
+
+    function updateCarButtons() {
+      carDB.forEach((car, i) => {
+        const btn = document.getElementById(`car-btn-${i}`);
+        if (i === currentCarIndex) {
+          btn.innerText = "Equipped";
+          btn.className = "btn-buy equip";
+        } else if (car.owned) {
+          btn.innerText = "Equip";
+          btn.className = "btn-buy owned";
+        }
+      });
+    }
+
+    function buyPart(partKey, cost) {
+      const part = parts[partKey];
+      if (part.lvl >= part.max) { alert("Max Level Reached!"); return; }
+      if (playerCash >= part.cost) {
+        playerCash -= part.cost;
+        part.lvl++;
+        part.cost = Math.floor(part.cost * 1.5);
+        document.getElementById(`lvl-${partKey}`).innerText = `Level ${part.lvl}`;
+        const btn = document.getElementById(`buy-${partKey}`);
+        if (part.lvl < part.max) btn.innerText = `$${part.cost}`;
+        else btn.innerText = "MAX";
+        updateCashDisplay();
+      } else {
+        alert("Not enough cash!");
+      }
+    }
+
+    const chatInput = document.getElementById('chat-input');
+    const chatLog = document.getElementById('chat-log');
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && gameState === 'driving') {
+        if (document.activeElement === chatInput) {
+          const msg = chatInput.value.trim();
+          if (msg) {
+            chatLog.innerHTML += `<div class="chat-msg"><b>Player:</b> ${msg}</div>`;
+            chatInput.value = '';
+            chatLog.scrollTop = chatLog.scrollHeight;
+            if (msg.toLowerCase() === 'tandem') { npcState = 'tandem'; chatLog.innerHTML += `<div class="chat-msg" style="color: #ff7675;"><b>NPC:</b> Let's burn rubber!</div>`; } 
+            else if (msg.toLowerCase() === 'leave') { npcState = 'wander'; chatLog.innerHTML += `<div class="chat-msg" style="color: #ff7675;"><b>NPC:</b> I'm out.</div>`; }
+          }
+          chatInput.blur();
+        } else { chatInput.focus(); }
+      }
+    });
+
+    let carGroup, npcCarGroup;
+    const playerCarContainer = new THREE.Group();
+    scene.add(playerCarContainer);
+
+    function buildDetailedCar(colorHex, isPlayer = false) {
+      const car = new THREE.Group();
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.9 });
+
+      const today = new Date();
+      const isPotatoDay = (today.getMonth() === 9 && today.getDate() === 22);
+
+      if (isPotatoDay) {
+        const potatoGeo = new THREE.IcosahedronGeometry(1.2, 2); 
+        potatoGeo.scale(1, 0.7, 1.5); 
+        const posAttribute = potatoGeo.attributes.position;
+        for (let i = 0; i < posAttribute.count; i++) {
+          posAttribute.setXYZ(
+            i, 
+            posAttribute.getX(i) + (Math.random() - 0.5) * 0.2,
+            posAttribute.getY(i) + (Math.random() - 0.5) * 0.2,
+            posAttribute.getZ(i) + (Math.random() - 0.5) * 0.2
+          );
+        }
+        potatoGeo.computeVertexNormals();
+        const potatoMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.9, metalness: 0.1 });
+        const potatoMesh = new THREE.Mesh(potatoGeo, potatoMat);
+        potatoMesh.position.y = 0.8;
+        potatoMesh.castShadow = true;
+        potatoMesh.receiveShadow = true;
+        car.add(potatoMesh);
+      } else {
+        const paint = new THREE.MeshPhysicalMaterial({ color: colorHex, roughness: 0.1, metalness: 0.8, clearcoat: 1.0, clearcoatRoughness: 0.1 });
+        const glass = new THREE.MeshPhysicalMaterial({ color: 0x050505, roughness: 0.1, transmission: 0.9, transparent: true });
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 4.4), paint);
+        body.position.y = 0.6;
+        body.castShadow = true; body.receiveShadow = true;
+        
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 2.2), glass);
+        cabin.position.set(0, 1.15, -0.2);
+        cabin.castShadow = true;
+        
+        car.add(body, cabin);
+
+        if (isPlayer && currentCarIndex > 0) {
+          const spoiler = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 0.4), darkMat);
+          spoiler.position.set(0, 1.2, 1.9);
+          const strut1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.1), darkMat);
+          strut1.position.set(0.6, 1.0, 1.9);
+          const strut2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.1), darkMat);
+          strut2.position.set(-0.6, 1.0, 1.9);
+          car.add(spoiler, strut1, strut2);
+        }
+      }
+
+      const wPos = [[0.95, 0.38, 1.4], [-0.95, 0.38, 1.4], [0.95, 0.38, -1.4], [-0.95, 0.38, -1.4]];
+      const localWheels = [];
+      wPos.forEach(pos => {
+        const pivot = new THREE.Group();
+        pivot.position.set(...pos);
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.35, 32), darkMat);
+        tire.rotation.z = Math.PI / 2;
+        tire.castShadow = true;
+        pivot.add(tire);
+        localWheels.push(pivot);
+        car.add(pivot);
+      });
+      return { group: car, wheels: localWheels };
+    }
+
+    function rebuildPlayerCar() {
+      while(playerCarContainer.children.length > 0) playerCarContainer.remove(playerCarContainer.children[0]);
+      const carData = carDB[currentCarIndex];
+      const playerCarObj = buildDetailedCar(carData.color, true);
+      carGroup = playerCarObj.group;
+      wheelsList = playerCarObj.wheels;
+      playerCarContainer.add(carGroup);
+    }
+    
+    rebuildPlayerCar();
+    const npcCarObj = buildDetailedCar(0x0984e3, false);
+    npcCarGroup = npcCarObj.group;
+    scene.add(npcCarGroup);
+
+    const trackGroup = new THREE.Group();
+    scene.add(trackGroup);
     let terrainMesh = null;
+
     function getTerrainHeight(x, z) {
+      if (gameState === 'zen') return 0;
       let y = Math.sin(x * 0.005) * Math.cos(z * 0.005) * 60;
       y += Math.sin(x * 0.02) * Math.cos(z * 0.01) * 15;
       const dist = Math.sqrt(x*x + z*z);
@@ -215,235 +400,130 @@
       return y;
     }
 
-    function buildTerrain(isDirt = false) {
+    function buildTerrain() {
       if (terrainMesh) scene.remove(terrainMesh);
-      const geo = new THREE.PlaneGeometry(2000, 2000, 128, 128);
+      const geo = new THREE.PlaneGeometry(2000, 2000, 256, 256);
       geo.rotateX(-Math.PI / 2);
       const pos = geo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        const z = pos.getZ(i);
-        pos.setY(i, getTerrainHeight(x, z));
-      }
+      for (let i = 0; i < pos.count; i++) pos.setY(i, getTerrainHeight(pos.getX(i), pos.getZ(i)));
       geo.computeVertexNormals();
-      terrainMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: isDirt ? 0x5c4033 : 0x3d5c2a, roughness: 1.0 }));
-      terrainMesh.receiveShadow = true;
+      const grassMat = new THREE.MeshStandardMaterial({ color: 0x2e4a1f, roughness: 0.9, metalness: 0.1 });
+      terrainMesh = new THREE.Mesh(geo, grassMat);
       terrainMesh.position.y = -0.5;
+      terrainMesh.receiveShadow = true;
       scene.add(terrainMesh);
     }
 
-    // Particles
-    const particles = [];
-    const smokeGeo = new THREE.SphereGeometry(0.3, 6, 6);
-    let currentParticleColor = 0xeeeeee;
-    function createParticle(pos) {
-      const p = new THREE.Mesh(smokeGeo, new THREE.MeshBasicMaterial({ color: currentParticleColor, transparent: true, opacity: 0.6 }));
-      p.position.copy(pos);
-      p.position.y += 0.2;
-      scene.add(p);
-      particles.push({ mesh: p, life: 1.0 });
-    }
-    function updateParticles(dt) {
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.life -= dt * 1.2;
-        p.mesh.scale.addScalar(dt * 4.0);
-        p.mesh.material.opacity = p.life * 0.4;
-        p.mesh.position.y += dt * 1.5;
-        if (p.life <= 0) {
-          scene.remove(p.mesh);
-          p.mesh.material.dispose();
-          particles.splice(i, 1);
-        }
-      }
-    }
-
-    // Car builder
-    let activeWingMesh = null;
-    let wheelsList = [];
-    function buildDetailedCar(colorHex = 0xd63031, isNPC = false) {
-      const car = new THREE.Group();
-      const localWheels = [];
-      const paint = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.6 });
-      const darkMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.8 });
-      const glass = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3, metalness: 0.3 });
-      const rimMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.8, roughness: 0.2 });
-
-      const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 4.4), paint);
-      bodyMesh.position.y = 0.6;
-      car.add(bodyMesh);
-
-      const cabinMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 2.2), glass);
-      cabinMesh.position.set(0, 1.15, -0.2);
-      car.add(cabinMesh);
-
-      const wPos = [[0.95, 0.38, 1.4], [-0.95, 0.38, 1.4], [0.95, 0.38, -1.4], [-0.95, 0.38, -1.4]];
-      wPos.forEach(pos => {
-        const pivot = new THREE.Group();
-        pivot.position.set(...pos);
-        const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.35, 16), darkMat);
-        tire.rotation.z = Math.PI / 2;
-        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.37, 8), rimMat);
-        rim.rotation.z = Math.PI / 2;
-        pivot.add(tire, rim);
-        localWheels.push(pivot);
-        car.add(pivot);
-      });
-      if (!isNPC) wheelsList = localWheels;
-
-      const wingGroup = new THREE.Group();
-      wingGroup.position.set(0, 0.9, -2.0);
-      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.1), darkMat);
-      stand.position.y = 0.2;
-      const blade = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.05, 0.5), darkMat);
-      blade.position.y = 0.4;
-      wingGroup.add(stand, blade);
-      if (!isNPC) activeWingMesh = blade;
-      car.add(wingGroup);
-
-      return car;
-    }
-
-    // Tracks
-    const trackGroup = new THREE.Group();
-    scene.add(trackGroup);
-
-    function createRibbonTrack(curvePoints, width = 20, isDirt = false) {
-      const curve = new THREE.CatmullRomCurve3(curvePoints, true);
-      const points = curve.getSpacedPoints(400);
-      const geo = new THREE.BufferGeometry();
-      const vertices = [], indices = [];
-      for (let i = 0; i < points.length; i++) {
-        const p = points[i];
-        const nextP = points[(i + 1) % points.length];
-        const dir = new THREE.Vector3().subVectors(nextP, p).normalize();
-        const side = new THREE.Vector3(0, 1, 0).cross(dir).normalize().multiplyScalar(width / 2);
-        const roadY = getTerrainHeight(p.x, p.z) + 0.15;
-
-        vertices.push(p.x + side.x, roadY, p.z + side.z);
-        vertices.push(p.x - side.x, roadY, p.z - side.z);
-
-        if (i < points.length - 1) {
-          const base = i * 2;
-          indices.push(base, base + 1, base + 2);
-          indices.push(base + 1, base + 3, base + 2);
-        }
-      }
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-      geo.setIndex(indices);
-      geo.computeVertexNormals();
-      return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: isDirt ? 0x8b5a2b : 0x222225, side: THREE.DoubleSide, roughness: 0.8 }));
-    }
-
-    function buildMountainPass() {
-      const pts = [];
-      for (let i = 0; i < 150; i++) {
-        const t = (i / 150) * Math.PI * 4;
-        const x = Math.sin(t) * 300 + Math.cos(t * 0.5) * 50;
-        const z = Math.cos(t) * 300;
-        pts.push(new THREE.Vector3(x, getTerrainHeight(x, z), z));
-      }
-      trackGroup.add(createRibbonTrack(pts, 24, false));
-      return pts[0];
-    }
-
-    function buildRallyStage() {
-      const pts = [];
-      for (let i = 0; i < 200; i++) {
-        const t = (i / 200) * Math.PI * 6;
-        const x = Math.sin(t * 1.2) * 400;
-        const z = Math.cos(t) * 400 + Math.sin(t * 0.5) * 100;
-        pts.push(new THREE.Vector3(x, getTerrainHeight(x, z), z));
-      }
-      trackGroup.add(createRibbonTrack(pts, 18, true));
-      return pts[0];
-    }
-
-    let gameState = 'garage';
-    let currentTraction = 1.0;
-    let carPos = new THREE.Vector3(1000, 0.8, 1000);
-    let velocity = new THREE.Vector3();
-    let carHeading = 0;
-    let driftScore = 0;
-    const clock = new THREE.Clock();
-
-    let carGroup = buildDetailedCar(0xd63031, false);
-    scene.add(carGroup);
-
-    let npcCarGroup = buildDetailedCar(0x0984e3, true);
-    scene.add(npcCarGroup);
-    let npcPos = new THREE.Vector3(1005, 0.8, 1005);
-    let npcHeading = 0;
-
     function enterGarage() {
       gameState = 'garage';
+      document.getElementById('chat-container').style.display = 'none';
+      document.getElementById('zen-hint').style.display = 'none';
+      document.getElementById('inventory-bar').style.display = 'none';
       while (trackGroup.children.length > 0) trackGroup.remove(trackGroup.children[0]);
-      buildTerrain(false);
-      document.getElementById('track-hud').innerText = "Location: Garage";
+      buildTerrain();
       carPos.set(1000, 0.8, 1000);
-      carHeading = Math.PI;
-      velocity.set(0,0,0);
       npcCarGroup.visible = false;
-      carGroup.position.copy(carPos);
+      playerCarContainer.visible = true;
     }
 
     function selectTrack(type) {
       gameState = 'driving';
+      document.getElementById('chat-container').style.display = 'block';
+      document.getElementById('zen-hint').style.display = 'none';
+      document.getElementById('inventory-bar').style.display = 'none';
       npcCarGroup.visible = true;
+      npcState = 'wander';
+      
       while (trackGroup.children.length > 0) trackGroup.remove(trackGroup.children[0]);
+      buildTerrain();
 
-      let startPos;
-      if (type === 'mountain') {
-        buildTerrain(false);
-        startPos = buildMountainPass();
-        document.getElementById('track-hud').innerText = "Location: Alpine Mountain Pass";
-        currentTraction = 0.985;
-        currentParticleColor = 0xeeeeee;
-      } else if (type === 'rally') {
-        buildTerrain(true);
-        startPos = buildRallyStage();
-        document.getElementById('track-hud').innerText = "Location: Forest Rally Stage";
-        currentTraction = 0.995;
-        currentParticleColor = 0x8b5a2b;
-      } else {
-        buildTerrain(false);
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.7 }));
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.y = 0.05;
-        trackGroup.add(floor);
-        startPos = new THREE.Vector3(0, 0.05, 0);
-        document.getElementById('track-hud').innerText = "Location: Pro Drift Arena";
-        currentTraction = 0.98;
-        currentParticleColor = 0xeeeeee;
-      }
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.7, metalness: 0.2 });
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0.05;
+      floor.receiveShadow = true;
+      trackGroup.add(floor);
 
-      carPos.copy(startPos).add(new THREE.Vector3(0, 0.5, 0));
-      carHeading = 0;
-      velocity.set(0, 0, 0);
-      npcPos.copy(carPos).add(new THREE.Vector3(-3, 0, -8));
-      npcHeading = 0;
+      carPos.set(0, 0.5, 0);
+      velocity.set(0,0,0);
+      npcPos.set(-10, 0.5, -10);
+      npcVelocity.set(0,0,0);
       toggleModal('track-modal');
     }
 
-    function toggleModal(id) {
-      const m = document.getElementById(id);
-      if (m) m.style.display = m.style.display === 'block' ? 'none' : 'block';
+    const voxels = new THREE.Group();
+    scene.add(voxels);
+    const mobs = [];
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let zenGrid = null;
+    let selectedColor = 0x27ae60;
+
+    function selectBlock(index, color) {
+      selectedColor = color;
+      document.querySelectorAll('.inv-slot').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.inv-slot')[index].classList.add('active');
     }
 
-    function login() {
-      const user = document.getElementById('username').value || 'ProDrifter99';
-      document.getElementById('user-display').innerText = `Account: ${user}`;
-      toggleModal('account-modal');
+    function enterZenMode() {
+      gameState = 'zen';
+      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+      document.getElementById('chat-container').style.display = 'none';
+      document.getElementById('zen-hint').style.display = 'block';
+      document.getElementById('inventory-bar').style.display = 'flex';
+      playerCarContainer.visible = false;
+      npcCarGroup.visible = false;
+      
+      while (trackGroup.children.length > 0) trackGroup.remove(trackGroup.children[0]);
+      if (terrainMesh) scene.remove(terrainMesh);
+      
+      if (!zenGrid) {
+        const gridHelper = new THREE.GridHelper(100, 50, 0x444444, 0x222222);
+        zenGrid = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ visible: false }));
+        zenGrid.rotation.x = -Math.PI / 2;
+        scene.add(gridHelper, zenGrid);
+
+        for(let i=0; i<3; i++) {
+          const mobGroup = new THREE.Group();
+          const mobMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.8 });
+          const head = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mobMat);
+          head.position.y = 2; head.castShadow = true;
+          const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 0.6), new THREE.MeshStandardMaterial({ color: 0x2980b9 }));
+          body.position.y = 1; body.castShadow = true;
+          mobGroup.add(head, body);
+          mobGroup.position.set((Math.random() - 0.5) * 30, 0, (Math.random() - 0.5) * 30);
+          scene.add(mobGroup);
+          mobs.push({ mesh: mobGroup, angle: Math.random() * Math.PI });
+        }
+      }
+      camera.position.set(0, 15, 20);
+      camera.lookAt(0, 0, 0);
     }
 
-    function connectMP() {
-      document.getElementById('mp-status').innerText = "Multiplayer: CONNECTED (Tandem Active)";
-      document.getElementById('mp-status').style.color = "#00b894";
-      toggleModal('mp-modal');
-    }
+    window.addEventListener('pointerdown', (e) => {
+      if (gameState !== 'zen' || e.button !== 0) return;
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObjects([zenGrid, ...voxels.children]);
+      if (intersects.length > 0) {
+        const intersect = intersects[0];
+        if (e.shiftKey && intersect.object !== zenGrid) {
+          voxels.remove(intersect.object);
+        } else if (!e.shiftKey) {
+          const voxel = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({ color: selectedColor, roughness: 0.8 }));
+          voxel.position.copy(intersect.point).add(intersect.face.normal);
+          voxel.position.divideScalar(2).floor().multiplyScalar(2).addScalar(1);
+          voxel.castShadow = true; voxel.receiveShadow = true;
+          voxels.add(voxel);
+        }
+      }
+    });
 
     const keys = { forward: false, backward: false, left: false, right: false, handbrake: false };
     window.addEventListener('keydown', e => {
+      if (document.activeElement === chatInput) return;
       if (['ArrowUp', 'KeyW'].includes(e.code)) keys.forward = true;
       if (['ArrowDown', 'KeyS'].includes(e.code)) keys.backward = true;
       if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = true;
@@ -458,111 +538,103 @@
       if (e.code === 'Space') keys.handbrake = false;
     });
 
-    const bindTouch = (id, key) => {
-      const el = document.getElementById(id);
-      el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
-      el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
-      el.addEventListener('touchcancel', (e) => { e.preventDefault(); keys[key] = false; });
-    };
-    bindTouch('mob-left', 'left');
-    bindTouch('mob-right', 'right');
-    bindTouch('mob-gas', 'forward');
-    bindTouch('mob-brake', 'backward');
-    bindTouch('mob-hb', 'handbrake');
-
-    window.onload = () => { toggleModal('tutorial-modal'); };
-    enterGarage();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
       if (gameState === 'driving') {
+        const activeCar = carDB[currentCarIndex];
+        const effectivePower = activeCar.basePower + (parts.turbo.lvl * 12) + (parts.weight.lvl * 5);
+        const effectiveTraction = activeCar.baseTraction + (parts.susp.lvl * 0.002);
+        const brakingPower = 30 + (parts.brakes.lvl * 15);
+
         const forwardDir = new THREE.Vector3(Math.sin(carHeading), 0, Math.cos(carHeading));
         const turnInput = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
 
         if (velocity.length() > 0.8) carHeading += turnInput * 3.0 * dt;
-        if (keys.forward) velocity.addScaledVector(forwardDir, 50 * dt);
-        if (keys.backward) velocity.addScaledVector(forwardDir, -30 * dt);
+        if (keys.forward) velocity.addScaledVector(forwardDir, effectivePower * dt);
+        if (keys.backward) velocity.addScaledVector(forwardDir, -brakingPower * dt);
 
-        const friction = keys.handbrake ? 0.94 : currentTraction;
+        const friction = keys.handbrake ? 0.94 : effectiveTraction;
         velocity.multiplyScalar(friction);
         carPos.addScaledVector(velocity, dt);
 
-        // Correct Ground Collision (Snaps car to terrain height)
         const groundHeight = getTerrainHeight(carPos.x, carPos.z);
         carPos.y = Math.max(carPos.y, groundHeight + 0.35);
 
-        carGroup.position.copy(carPos);
-        carGroup.rotation.y = carHeading;
+        const frontH = getTerrainHeight(carPos.x + forwardDir.x * 2, carPos.z + forwardDir.z * 2);
+        const backH = getTerrainHeight(carPos.x - forwardDir.x * 2, carPos.z - forwardDir.z * 2);
+
+        playerCarContainer.position.copy(carPos);
+        playerCarContainer.rotation.y = carHeading;
+        playerCarContainer.rotation.z = Math.atan2(backH - frontH, 4.0);
 
         const currentSpeed = velocity.length();
         document.getElementById('speedometer').innerText = `Speed: ${Math.round(currentSpeed * 3.6)} km/h`;
 
-        // Fixed NPC Tandem Offset (Properly positioned beside your door, away from camera)
-        if (npcCarGroup.visible) {
-          const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
-          const targetNPCPos = carPos.clone()
-            .sub(forwardDir.clone().multiplyScalar(2.0))
-            .add(rightDir.multiplyScalar(4.5));
-          
-          targetNPCPos.y = Math.max(targetNPCPos.y, getTerrainHeight(targetNPCPos.x, targetNPCPos.z) + 0.35);
-          
-          npcPos.lerp(targetNPCPos, 3.5 * dt);
-          npcHeading = THREE.MathUtils.lerp(npcHeading, carHeading, 5.0 * dt);
-          
-          npcCarGroup.position.copy(npcPos);
-          npcCarGroup.rotation.y = npcHeading;
-          
-          if (currentSpeed > 5 && (Math.abs(turnInput) > 0 || keys.handbrake)) {
-            createParticle(npcPos.clone().sub(forwardDir.clone().multiplyScalar(2)));
-          }
-        }
-
-        const isDrifting = (keys.handbrake && currentSpeed > 3) || (Math.abs(turnInput) > 0 && currentSpeed > 10);
+        const isDrifting = (keys.handbrake && currentSpeed > 5) || (Math.abs(turnInput) > 0 && currentSpeed > 15 && friction < 0.98);
         if (isDrifting) {
-          wheelsList.slice(2).forEach(w => {
-            const worldPos = new THREE.Vector3();
-            w.getWorldPosition(worldPos);
-            createParticle(worldPos);
-          });
-          driftScore += Math.round(currentSpeed * (currentTraction === 0.995 ? 3 : 2));
+          const pts = Math.round(currentSpeed * 2);
+          driftScore += pts;
           document.getElementById('drift-score').innerText = `Drift Points: ${driftScore}`;
+          if (Math.random() < 0.1) { playerCash += Math.floor(pts / 5); updateCashDisplay(); }
         }
 
         wheelsList.forEach((w, index) => {
           w.children[0].rotation.x += currentSpeed * dt * 3;
-          w.children[1].rotation.x += currentSpeed * dt * 3;
           if (index < 2) w.rotation.y = turnInput * 0.5;
         });
 
-        if (activeWingMesh) {
-          const targetRot = (keys.backward || keys.handbrake) ? -Math.PI / 4 : 0;
-          activeWingMesh.rotation.x = THREE.MathUtils.lerp(activeWingMesh.rotation.x, targetRot, 0.2);
+        if (npcState === 'wander') {
+          npcTurnAngle += dt * 0.5;
+          const npcTargetDir = new THREE.Vector3(Math.sin(npcTurnAngle), 0, Math.cos(npcTurnAngle));
+          npcVelocity.addScaledVector(npcTargetDir, 25 * dt);
+          npcVelocity.multiplyScalar(0.96);
+          npcPos.addScaledVector(npcVelocity, dt);
+          npcHeading = Math.atan2(npcVelocity.x, npcVelocity.z);
+        } else if (npcState === 'tandem') {
+          const rightDir = new THREE.Vector3(Math.cos(carHeading), 0, -Math.sin(carHeading));
+          const targetNPCPos = carPos.clone().sub(forwardDir.clone().multiplyScalar(2.0)).add(rightDir.multiplyScalar(4.5));
+          npcPos.lerp(targetNPCPos, 3.5 * dt);
+          npcHeading = THREE.MathUtils.lerp(npcHeading, carHeading, 5.0 * dt);
         }
 
-        const camOffset = new THREE.Vector3(0, 5, -16).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
+        npcPos.y = Math.max(npcPos.y, getTerrainHeight(npcPos.x, npcPos.z) + 0.35);
+        const npcFrontH = getTerrainHeight(npcPos.x + Math.sin(npcHeading) * 2, npcPos.z + Math.cos(npcHeading) * 2);
+        const npcBackH = getTerrainHeight(npcPos.x - Math.sin(npcHeading) * 2, npcPos.z - Math.cos(npcHeading) * 2);
+        
+        npcCarGroup.position.copy(npcPos);
+        npcCarGroup.rotation.y = npcHeading;
+        npcCarGroup.rotation.z = Math.atan2(npcBackH - npcFrontH, 4.0);
+
+        const camOffset = new THREE.Vector3(0, 5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carHeading);
         camera.position.lerp(carPos.clone().add(camOffset), 0.15);
         camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.5, 0)));
 
-      } else {
+      } else if (gameState === 'garage') {
         const time = clock.getElapsedTime();
-        camera.position.x = 1000 + Math.sin(time * 0.5) * 8;
-        camera.position.z = 1000 + Math.cos(time * 0.5) * 8;
-        camera.position.y = 2 + Math.sin(time * 0.2);
+        camera.position.x = 1000 + Math.sin(time * 0.3) * 8;
+        camera.position.z = 1000 + Math.cos(time * 0.3) * 8;
+        camera.position.y = 2 + Math.sin(time * 0.15);
         camera.lookAt(1000, 1, 1000);
+      } else if (gameState === 'zen') {
+        const time = clock.getElapsedTime();
+        camera.position.x = Math.sin(time * 0.1) * 30;
+        camera.position.z = Math.cos(time * 0.1) * 30;
+        camera.lookAt(0, 0, 0);
+
+        mobs.forEach(mob => {
+          mob.angle += dt * 0.5;
+          mob.mesh.position.x += Math.sin(mob.angle) * dt * 2;
+          mob.mesh.position.z += Math.cos(mob.angle) * dt * 2;
+          mob.mesh.rotation.y = mob.angle;
+        });
       }
 
-      updateParticles(dt);
       renderer.render(scene, camera);
     }
 
+    enterGarage();
     animate();
   </script>
 </body>
